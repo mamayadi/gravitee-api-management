@@ -552,9 +552,12 @@ jobs:
     test:
         executor:
             name: openjdk
-            class: medium+
+            class: large
         steps:
             - checkout
+            - setup_remote_docker:
+                  version: 20.10.14
+                  docker_layer_caching: true
             - attach_workspace:
                   at: .
             - restore-maven-job-cache:
@@ -563,9 +566,17 @@ jobs:
                   keys:
                       - gravitee-api-management-v8-build-apim-{{ .Environment.CIRCLE_WORKFLOW_WORKSPACE_ID }}
             - run:
+                  name: Setup Environment Variables
+                  command: |
+                      echo "export TESTCONTAINERS_HOST_OVERRIDE=localhost" >> $BASH_ENV
+            - run:
+                  name: Testcontainers tunnel
+                  background: true
+                  command: .circleci/autoforward.py
+            - run:
                   name: Run tests
                   command: |
-                      mvn -U --fail-fast -s .gravitee.settings.xml test --no-transfer-progress -Dmain-modules -Dskip.validation=true -T 2C
+                      mvn -U --fail-fast -s .gravitee.settings.xml verify --no-transfer-progress -Dskip.validation=true -T 2C
             - run:
                   name: Save test results
                   command: |
@@ -583,6 +594,8 @@ jobs:
                       - gravitee-apim-gateway/gravitee-apim-gateway-coverage/target/site/jacoco-aggregate/
                       - gravitee-apim-rest-api/gravitee-apim-rest-api-coverage/target/site/jacoco-aggregate/
                       - gravitee-apim-definition/gravitee-apim-definition-coverage/target/site/jacoco-aggregate/
+                      - gravitee-apim-plugin/gravitee-apim-plugin-coverage/target/site/jacoco-aggregate/
+                      - gravitee-apim-repository/gravitee-apim-repository-coverage/target/site/jacoco-aggregate/
 
     test-plugin:
         executor:
@@ -1423,19 +1436,29 @@ jobs:
                 description: type and version of the database to test
                 default: ""
         executor:
-            name: ubuntu
+            name: openjdk
             class: large
-            with_docker_layer_caching: true
         steps:
             - when:
                   condition: << parameters.version >>
                   steps:
-                      - install-jdk-17-for-machine
+#                      - install-jdk-17-for-machine
+                      - setup_remote_docker:
+#                            version: 20.10.14
+                            docker_layer_caching: true
                       - checkout
                       - attach_workspace:
                             at: .
                       - restore-maven-job-cache:
                             jobName: jdbc-test-container
+                      - run:
+                            name: Setup Environment Variables
+                            command: |
+                                echo "export TESTCONTAINERS_HOST_OVERRIDE=localhost" >> $BASH_ENV
+                      - run:
+                            name: Testcontainers tunnel
+                            background: true
+                            command: .circleci/autoforward.py
                       - run:
                             name: Run tests
                             command: |
@@ -1467,17 +1490,28 @@ jobs:
                 description: version of the database to test
                 default: ""
         executor:
-            name: ubuntu
+          name: openjdk
         steps:
             - when:
                   condition: << parameters.version >>
                   steps:
                       - install-jdk-17-for-machine
+                      - setup_remote_docker:
+#                            version: 20.10.14
+                            docker_layer_caching: true
                       - checkout
                       - attach_workspace:
                             at: .
                       - restore-maven-job-cache:
                             jobName: mongo-test-container
+                      - run:
+                          name: Setup Environment Variables
+                          command: |
+                            echo "export TESTCONTAINERS_HOST_OVERRIDE=localhost" >> $BASH_ENV
+                      - run:
+                          name: Testcontainers tunnel
+                          background: true
+                          command: .circleci/autoforward.py
                       - run:
                             name: Run repository tests with MongoDB << parameters.version >>
                             command: |
@@ -1746,6 +1780,18 @@ workflows:
             and:
                 - equal: [pull_requests, << pipeline.parameters.gio_action >>]
         jobs:
+            - setup:
+                  context: cicd-orchestrator
+            - mongo-test-container:
+                  context: cicd-orchestrator
+                  requires:
+                      - setup
+                  version: "5"
+    pull_requests_backup:
+        when:
+            and:
+                - equal: [pull_requests_backup, << pipeline.parameters.gio_action >>]
+        jobs:
             - community-build:
                   context: cicd-orchestrator
                   filters:
@@ -1787,29 +1833,31 @@ workflows:
                               - gravitee-apim-rest-api
                               - gravitee-apim-gateway
                               - gravitee-apim-definition
+                              - gravitee-apim-plugin
+                              - gravitee-apim-repository
                   context: cicd-orchestrator
                   requires:
                       - test
-            - test-plugin:
-                  context: cicd-orchestrator
-                  requires:
-                      - build
-            - sonarcloud-analysis:
-                  name: Sonar - gravitee-apim-plugin
-                  working_directory: gravitee-apim-plugin
-                  context: cicd-orchestrator
-                  requires:
-                      - test-plugin
-            - test-repository:
-                  context: cicd-orchestrator
-                  requires:
-                      - build
-            - sonarcloud-analysis:
-                  name: Sonar - gravitee-apim-repository
-                  working_directory: gravitee-apim-repository
-                  context: cicd-orchestrator
-                  requires:
-                      - test-repository
+#            - test-plugin:
+#                  context: cicd-orchestrator
+#                  requires:
+#                      - build
+#            - sonarcloud-analysis:
+#                  name: Sonar - gravitee-apim-plugin
+#                  working_directory: gravitee-apim-plugin
+#                  context: cicd-orchestrator
+#                  requires:
+#                      - test-plugin
+#            - test-repository:
+#                  context: cicd-orchestrator
+#                  requires:
+#                      - build
+#            - sonarcloud-analysis:
+#                  name: Sonar - gravitee-apim-repository
+#                  working_directory: gravitee-apim-repository
+#                  context: cicd-orchestrator
+#                  requires:
+#                      - test-repository
             - publish-on-artifactory:
                   context: cicd-orchestrator
                   filters:
@@ -1821,7 +1869,7 @@ workflows:
                               - 8386-refactor-context
                   requires:
                       - test
-                      - test-repository
+#                      - test-repository
             - publish-on-nexus:
                   context: cicd-orchestrator
                   filters:
@@ -1832,13 +1880,13 @@ workflows:
                               - refactor-distribution-build-process
                   requires:
                       - test
-                      - test-repository
+#                      - test-repository
             - publish-images-azure-registry:
                   name: Publish images on azure registry
                   context: cicd-orchestrator
                   requires:
                       - test
-                      - test-repository
+#                      - test-repository
                   filters:
                       branches:
                           only:
@@ -1865,7 +1913,7 @@ workflows:
                   context: cicd-orchestrator
                   requires:
                       - Build Console Storybook
-                      - test-repository
+#                      - test-repository
                       - test
             - webui-build:
                   name: Build APIM Console
