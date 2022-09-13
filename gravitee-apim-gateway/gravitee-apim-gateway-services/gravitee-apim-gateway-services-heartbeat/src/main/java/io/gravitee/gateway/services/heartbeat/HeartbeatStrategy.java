@@ -15,8 +15,11 @@
  */
 package io.gravitee.gateway.services.heartbeat;
 
+import io.gravitee.repository.management.model.Event;
+import java.util.function.Supplier;
+
 public interface HeartbeatStrategy {
-    void doStart() throws Exception;
+        void doStart(Supplier<Event> supplier) throws Exception;
     default void preStop() throws Exception {}
     void doStop() throws Exception;
 }

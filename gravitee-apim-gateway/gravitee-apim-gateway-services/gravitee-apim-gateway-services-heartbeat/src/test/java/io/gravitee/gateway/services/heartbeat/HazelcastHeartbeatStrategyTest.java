@@ -21,14 +21,17 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 import io.gravitee.common.utils.UUID;
+import io.gravitee.gateway.services.heartbeat.spring.configuration.HeartbeatDependencies;
 import io.gravitee.node.api.cluster.ClusterManager;
 import io.gravitee.node.api.message.Message;
+import io.gravitee.node.api.message.MessageProducer;
 import io.gravitee.node.api.message.Topic;
 import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.management.api.EventRepository;
 import io.gravitee.repository.management.model.Event;
 import java.util.HashMap;
 import java.util.Map;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
@@ -40,10 +43,13 @@ import org.mockito.junit.MockitoJUnitRunner;
  * @author GraviteeSource Team
  */
 @RunWith(MockitoJUnitRunner.class)
-public class HeartbeatServiceTest {
+public class HazelcastHeartbeatStrategyTest {
 
     @Mock
     private ClusterManager clusterManager;
+
+    @Mock
+    private MessageProducer messageProducer;
 
     @Mock
     private EventRepository eventRepository;
@@ -57,8 +63,19 @@ public class HeartbeatServiceTest {
     @Mock
     private Message<Event> message;
 
+    private HazelcastHeartbeatStrategy cut;
+
     @InjectMocks
-    private HeartbeatService cut;
+    private HeartbeatDependencies heartbeatDependencies;
+
+    @Before
+    public void setUp() {
+        when(messageProducer.<Event>getTopic(HazelcastHeartbeatStrategy.HEARTBEATS)).thenReturn(topic);
+        when(messageProducer.<Event>getTopic(HazelcastHeartbeatStrategy.HEARTBEATS_FAILURE)).thenReturn(topicFailure);
+        when(topic.addMessageConsumer(any())).thenReturn(null);
+
+        cut = new HazelcastHeartbeatStrategy(heartbeatDependencies, clusterManager, messageProducer);
+    }
 
     @Test
     public void shouldCreateEvent() throws TechnicalException {
@@ -100,7 +117,7 @@ public class HeartbeatServiceTest {
             .thenThrow(new IllegalStateException(String.format("No event found with id [%s]", event.getId())));
         cut.onMessage(message);
 
-        verifyNoInteractions(topic);
+        verify(topic).addMessageConsumer(any());
         verify(topicFailure).publish(event);
         assertTrue(event.getProperties().containsKey(EVENT_STATE_PROPERTY));
         assertEquals("recreate", event.getProperties().get(EVENT_STATE_PROPERTY));
@@ -115,9 +132,10 @@ public class HeartbeatServiceTest {
         when(clusterManager.isMasterNode()).thenReturn(true);
         when(message.getMessageObject()).thenReturn(event);
         when(eventRepository.update(event)).thenThrow(new TechnicalException("Connection timeout"));
+
         cut.onMessage(message);
 
-        verifyNoInteractions(topic);
+        verify(topic).addMessageConsumer(any());
         verify(topicFailure).publish(event);
         assertTrue(event.getProperties().containsKey(EVENT_STATE_PROPERTY));
         assertEquals("recreate", event.getProperties().get(EVENT_STATE_PROPERTY));
