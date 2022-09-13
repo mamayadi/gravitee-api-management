@@ -25,7 +25,7 @@ public class StandaloneHeartbeatStrategy implements HeartbeatStrategy {
     private final int delay;
     private final TimeUnit unit;
     private Event heartbeatEvent;
-    private boolean isCreationInProgress = false;
+    private boolean heartbeatEventProcessing = false;
     private Supplier<Event> prepareEvent;
 
     public StandaloneHeartbeatStrategy(HeartbeatDependencies heartbeatDependencies) {
@@ -73,23 +73,26 @@ public class StandaloneHeartbeatStrategy implements HeartbeatStrategy {
         // TODO: Move to debug level?
         LOGGER.debug("Sending heartbeat event");
 
-        // Try to create till the event is effectively created
-        if (heartbeatEvent == null && !isCreationInProgress) {
+        if (heartbeatEventProcessing) {
+            LOGGER.warn("Skipping heartbeat event, previous event is still processing");
+            return;
+        }
+
+        heartbeatEventProcessing = true;
+        if (heartbeatEvent == null) {
             sendInitHeartbeatEvent();
         } else {
             sendUpdatedHeartbeatEvent();
         }
+        heartbeatEventProcessing = false;
     }
 
     private void sendInitHeartbeatEvent() {
-        isCreationInProgress = true;
         Event event = prepareEvent.get();
         try {
             heartbeatEvent = eventRepository.create(event);
         } catch (Exception ex) {
             LOGGER.warn("An error occurred while trying to create the heartbeat event id[{}] type[{}]", event.getId(), event.getType(), ex);
-        } finally {
-            isCreationInProgress = false;
         }
     }
 
