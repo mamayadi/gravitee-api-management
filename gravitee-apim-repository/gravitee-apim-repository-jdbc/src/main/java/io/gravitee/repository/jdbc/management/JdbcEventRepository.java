@@ -280,6 +280,29 @@ public class JdbcEventRepository extends JdbcAbstractPageableRepository<Event> i
         return queryEvents(builder.toString(), args);
     }
 
+    @Override
+    public Event createOrUpdate(Event event) throws TechnicalException {
+        if (event == null || event.getId() == null) {
+            throw new IllegalStateException("Event to update must have an id");
+        }
+
+        if (existsById(event.getId())) {
+            // TODO: optimize to update only relevant fields (partial update)
+            return update(event);
+        }
+        return create(event);
+    }
+
+    private boolean existsById(String id) throws TechnicalException {
+        try {
+            var result = jdbcTemplate.queryForObject("select count(id) from " + this.tableName + " where id = ?", Integer.class, id);
+            return null != result && result > 0;
+        } catch (final Exception ex) {
+            LOGGER.error("Failed to check if event exists", ex);
+            throw new TechnicalException("Failed to check if event exists", ex);
+        }
+    }
+
     private List<Event> queryEvents(String sql, List<Object> args) {
         LOGGER.debug("SQL: {}", sql);
         LOGGER.debug("Args: {}", args);

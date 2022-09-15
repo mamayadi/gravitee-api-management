@@ -30,10 +30,7 @@ import io.gravitee.repository.management.api.search.EventCriteria;
 import io.gravitee.repository.management.api.search.builder.PageableBuilder;
 import io.gravitee.repository.management.model.Event;
 import io.gravitee.repository.management.model.EventType;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import org.mockito.internal.util.collections.Sets;
 
 /**
@@ -401,5 +398,11 @@ public class EventRepositoryMock extends AbstractRepositoryMock<EventRepository>
             )
         )
             .thenReturn(singletonList(event1));
+
+        when(eventRepository.createOrUpdate(argThat(event -> null != event && EventType.PUBLISH_API.equals(event.getType()))))
+            .thenReturn(event1);
+        when(eventRepository.createOrUpdate(argThat(event -> null != event && EventType.UNPUBLISH_API.equals(event.getType()))))
+            .thenReturn(event2);
+        when(eventRepository.createOrUpdate(isNull())).thenThrow(new IllegalStateException());
     }
 }

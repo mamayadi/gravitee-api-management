@@ -22,6 +22,7 @@ import static org.junit.Assert.*;
 import io.gravitee.common.data.domain.Page;
 import io.gravitee.common.utils.UUID;
 import io.gravitee.repository.config.AbstractRepositoryTest;
+import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.management.api.search.EventCriteria;
 import io.gravitee.repository.management.api.search.builder.PageableBuilder;
 import io.gravitee.repository.management.model.Event;
@@ -471,5 +472,55 @@ public class EventRepositoryTest extends AbstractRepositoryTest {
     public void shouldNotUpdateNull() throws Exception {
         eventRepository.update(null);
         fail("A null event should not be updated");
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void createOrUpdateShouldThrowIllegalStateException() throws TechnicalException {
+        eventRepository.createOrUpdate(null);
+    }
+
+    @Test
+    public void createOrUpdateShouldCreateTheEvent() throws TechnicalException {
+        Event event = new Event();
+        String uuid = UUID.toString(UUID.random());
+        event.setId(uuid);
+        event.setEnvironments(singleton("DEFAULT"));
+        event.setType(EventType.PUBLISH_API);
+        event.setPayload("{}");
+        event.setParentId(null);
+        event.setCreatedAt(new Date());
+        event.setUpdatedAt(event.getCreatedAt());
+
+        var createdEvent = eventRepository.createOrUpdate(event);
+
+        assertEquals("Invalid saved event type.", EventType.PUBLISH_API, createdEvent.getType());
+        assertEquals("Invalid saved event payload.", "{}", createdEvent.getPayload());
+        assertTrue("Invalid saved environment id.", createdEvent.getEnvironments().contains("DEFAULT"));
+    }
+
+    @Test
+    public void createOrUpdateShouldUpdateTheEvent() throws TechnicalException {
+        Event event = new Event();
+        String uuid = UUID.toString(UUID.random());
+        event.setId(uuid);
+        event.setEnvironments(singleton("DEFAULT"));
+        event.setType(EventType.PUBLISH_API);
+        event.setPayload("{}");
+        event.setParentId(null);
+        event.setCreatedAt(new Date());
+        event.setUpdatedAt(event.getCreatedAt());
+
+        var createdEvent = eventRepository.createOrUpdate(event);
+
+        assertEquals("Invalid saved event type.", EventType.PUBLISH_API, createdEvent.getType());
+        assertEquals("Invalid saved event payload.", "{}", createdEvent.getPayload());
+        assertTrue("Invalid saved environment id.", createdEvent.getEnvironments().contains("DEFAULT"));
+
+        var updatedAt = new Date();
+        event.setUpdatedAt(updatedAt);
+        event.setType(EventType.UNPUBLISH_API);
+
+        var updatedEvent = eventRepository.createOrUpdate(event);
+        assertEquals(updatedEvent.getType(), EventType.UNPUBLISH_API);
     }
 }

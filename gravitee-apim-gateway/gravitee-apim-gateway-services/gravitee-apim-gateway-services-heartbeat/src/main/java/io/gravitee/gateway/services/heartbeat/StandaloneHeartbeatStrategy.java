@@ -25,7 +25,6 @@ public class StandaloneHeartbeatStrategy implements HeartbeatStrategy {
     private final int delay;
     private final TimeUnit unit;
     private Event heartbeatEvent;
-    private boolean heartbeatEventProcessing = false;
     private Supplier<Event> prepareEvent;
 
     public StandaloneHeartbeatStrategy(HeartbeatDependencies heartbeatDependencies) {
@@ -65,52 +64,28 @@ public class StandaloneHeartbeatStrategy implements HeartbeatStrategy {
         } else {
             LOGGER.info("Gateway heartbeat service already shut-downed");
         }
-
         LOGGER.info("Stop gateway heartbeat service: DONE");
     }
 
     private void sendHeartbeatEvent() {
-        // TODO: Move to debug level?
         LOGGER.debug("Sending heartbeat event");
 
-        if (heartbeatEventProcessing) {
-            LOGGER.warn("Skipping heartbeat event, previous event is still processing");
-            return;
-        }
-
-        heartbeatEventProcessing = true;
-        if (heartbeatEvent == null) {
-            sendInitHeartbeatEvent();
-        } else {
-            sendUpdatedHeartbeatEvent();
-        }
-        heartbeatEventProcessing = false;
-    }
-
-    private void sendInitHeartbeatEvent() {
-        Event event = prepareEvent.get();
         try {
-            heartbeatEvent = eventRepository.create(event);
-        } catch (Exception ex) {
-            LOGGER.warn("An error occurred while trying to create the heartbeat event id[{}] type[{}]", event.getId(), event.getType(), ex);
-        }
-    }
-
-    private void sendUpdatedHeartbeatEvent() {
-        Date updatedAt = new Date();
-        heartbeatEvent.setUpdatedAt(updatedAt);
-        heartbeatEvent.getProperties().put(EVENT_LAST_HEARTBEAT_PROPERTY, Long.toString(updatedAt.getTime()));
-        try {
-            heartbeatEvent = eventRepository.update(heartbeatEvent);
+            if (heartbeatEvent == null) {
+                heartbeatEvent = eventRepository.createOrUpdate(prepareEvent.get());
+            } else {
+                Date updatedAt = new Date();
+                heartbeatEvent.setUpdatedAt(updatedAt);
+                heartbeatEvent.getProperties().put(EVENT_LAST_HEARTBEAT_PROPERTY, Long.toString(updatedAt.getTime()));
+                eventRepository.createOrUpdate(heartbeatEvent);
+            }
         } catch (Exception ex) {
             LOGGER.warn(
-                "An error occurred while trying to update the heartbeat event id[{}] type[{}]",
+                "An error occurred while trying to create the heartbeat event id[{}] type[{}]",
                 heartbeatEvent.getId(),
                 heartbeatEvent.getType(),
                 ex
             );
-            // TODO: should we try to re-create the event ?
-            sendInitHeartbeatEvent();
         }
     }
 

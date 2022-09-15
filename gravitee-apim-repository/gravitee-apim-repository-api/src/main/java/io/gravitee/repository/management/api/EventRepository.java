@@ -16,6 +16,7 @@
 package io.gravitee.repository.management.api;
 
 import io.gravitee.common.data.domain.Page;
+import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.management.api.search.EventCriteria;
 import io.gravitee.repository.management.api.search.Pageable;
 import io.gravitee.repository.management.model.Event;
@@ -48,7 +49,6 @@ public interface EventRepository extends CrudRepository<Event, String> {
      * @return the list of latest events.
      */
     List<Event> searchLatest(EventCriteria criteria, Event.EventProperties group, Long page, Long size);
-
     /**
      * Search for {@link Event} with {@link Pageable} feature.
      *
@@ -61,7 +61,6 @@ public interface EventRepository extends CrudRepository<Event, String> {
      * @return the list of events.
      */
     Page<Event> search(EventCriteria filter, Pageable pageable);
-
     /**
      * Search for {@link Event}.
      *
@@ -72,4 +71,6 @@ public interface EventRepository extends CrudRepository<Event, String> {
      * @return the list of events.
      */
     List<Event> search(EventCriteria filter);
+
+    Event createOrUpdate(Event event) throws TechnicalException;
 }

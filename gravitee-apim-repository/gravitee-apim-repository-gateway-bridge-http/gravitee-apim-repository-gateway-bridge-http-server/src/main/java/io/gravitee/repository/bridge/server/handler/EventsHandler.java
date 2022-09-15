@@ -171,6 +171,23 @@ public class EventsHandler extends AbstractHandler {
             );
     }
 
+    public void createOrUpdate(RoutingContext ctx) {
+        ctx
+            .vertx()
+            .executeBlocking(
+                promise -> {
+                    try {
+                        Event event = ctx.getBodyAsJson().mapTo(Event.class);
+                        promise.complete(eventRepository.createOrUpdate(event));
+                    } catch (Exception ex) {
+                        LOGGER.error("Unable to create or update an event", ex);
+                        promise.fail(ex);
+                    }
+                },
+                (Handler<AsyncResult<Event>>) event -> handleResponse(ctx, event)
+            );
+    }
+
     private EventCriteria readCriteria(JsonObject payload) {
         EventCriteria.Builder builder = new EventCriteria.Builder();
 

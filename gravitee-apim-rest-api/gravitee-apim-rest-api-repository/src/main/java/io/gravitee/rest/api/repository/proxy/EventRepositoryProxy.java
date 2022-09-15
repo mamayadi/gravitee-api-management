@@ -69,6 +69,11 @@ public class EventRepositoryProxy extends AbstractProxy<EventRepository> impleme
     }
 
     @Override
+    public Event createOrUpdate(Event event) throws TechnicalException {
+        return target.createOrUpdate(event);
+    }
+
+    @Override
     public Set<Event> findAll() throws TechnicalException {
         return target.findAll();
     }
