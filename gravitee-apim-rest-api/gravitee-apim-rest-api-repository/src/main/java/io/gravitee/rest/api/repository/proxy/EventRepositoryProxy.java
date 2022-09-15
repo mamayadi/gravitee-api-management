@@ -69,8 +69,8 @@ public class EventRepositoryProxy extends AbstractProxy<EventRepository> impleme
     }
 
     @Override
-    public Event createOrUpdate(Event event) throws TechnicalException {
-        return target.createOrUpdate(event);
+    public Event createOrUpdateHeartbeat(Event event) throws TechnicalException {
+        return target.createOrUpdateHeartbeat(event);
     }
 
     @Override

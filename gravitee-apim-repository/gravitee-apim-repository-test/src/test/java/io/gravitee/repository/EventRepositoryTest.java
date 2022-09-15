@@ -15,8 +15,7 @@
  */
 package io.gravitee.repository;
 
-import static java.util.Collections.singleton;
-import static java.util.Collections.singletonList;
+import static java.util.Collections.*;
 import static org.junit.Assert.*;
 
 import io.gravitee.common.data.domain.Page;
@@ -27,6 +26,9 @@ import io.gravitee.repository.management.api.search.EventCriteria;
 import io.gravitee.repository.management.api.search.builder.PageableBuilder;
 import io.gravitee.repository.management.model.Event;
 import io.gravitee.repository.management.model.EventType;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import org.junit.Test;
 
@@ -476,22 +478,23 @@ public class EventRepositoryTest extends AbstractRepositoryTest {
 
     @Test(expected = IllegalStateException.class)
     public void createOrUpdateShouldThrowIllegalStateException() throws TechnicalException {
-        eventRepository.createOrUpdate(null);
+        eventRepository.createOrUpdateHeartbeat(null);
     }
 
     @Test
-    public void createOrUpdateShouldCreateTheEvent() throws TechnicalException {
+    public void createOrUpdateShouldCreateHeartbeatEvent() throws TechnicalException {
         Event event = new Event();
         String uuid = UUID.toString(UUID.random());
         event.setId(uuid);
         event.setEnvironments(singleton("DEFAULT"));
+        // Here we use a PUBLISH_API event to ease the writing of this test and differentiate the cases
         event.setType(EventType.PUBLISH_API);
         event.setPayload("{}");
         event.setParentId(null);
         event.setCreatedAt(new Date());
         event.setUpdatedAt(event.getCreatedAt());
 
-        var createdEvent = eventRepository.createOrUpdate(event);
+        var createdEvent = eventRepository.createOrUpdateHeartbeat(event);
 
         assertEquals("Invalid saved event type.", EventType.PUBLISH_API, createdEvent.getType());
         assertEquals("Invalid saved event payload.", "{}", createdEvent.getPayload());
@@ -499,28 +502,43 @@ public class EventRepositoryTest extends AbstractRepositoryTest {
     }
 
     @Test
-    public void createOrUpdateShouldUpdateTheEvent() throws TechnicalException {
+    public void createOrUpdateShouldUpdateHeartbeatEvent() throws TechnicalException {
         Event event = new Event();
         String uuid = UUID.toString(UUID.random());
+        LocalDateTime localDate = LocalDateTime.now().minusMinutes(1);
+        Date createdDate = Date.from(localDate.atZone(ZoneId.systemDefault()).toInstant());
         event.setId(uuid);
         event.setEnvironments(singleton("DEFAULT"));
+        // Here we use a PUBLISH_API event to ease the writing of this test and differentiate the cases
         event.setType(EventType.PUBLISH_API);
         event.setPayload("{}");
         event.setParentId(null);
-        event.setCreatedAt(new Date());
-        event.setUpdatedAt(event.getCreatedAt());
+        event.setCreatedAt(createdDate);
+        event.setUpdatedAt(createdDate);
+        event.setProperties(new HashMap<>());
+        event.getProperties().put("last_heartbeat_at", new Timestamp(createdDate.getTime()).toString());
 
-        var createdEvent = eventRepository.createOrUpdate(event);
+        var createdEvent = eventRepository.createOrUpdateHeartbeat(event);
 
         assertEquals("Invalid saved event type.", EventType.PUBLISH_API, createdEvent.getType());
         assertEquals("Invalid saved event payload.", "{}", createdEvent.getPayload());
         assertTrue("Invalid saved environment id.", createdEvent.getEnvironments().contains("DEFAULT"));
 
-        var updatedAt = new Date();
-        event.setUpdatedAt(updatedAt);
+        // Here we use a UNPUBLISH_API event to ease the writing of this test and differentiate the cases
         event.setType(EventType.UNPUBLISH_API);
+        var updateDate = new Date();
+        event.setUpdatedAt(updateDate);
+        event.setProperties(singletonMap("last_heartbeat_at", new Timestamp(updateDate.getTime()).toString()));
 
-        var updatedEvent = eventRepository.createOrUpdate(event);
+        var updatedEvent = eventRepository.createOrUpdateHeartbeat(event);
+
+        assertTrue(updatedEvent.getUpdatedAt().after(createdEvent.getUpdatedAt()));
+        assertNotNull(updatedEvent.getProperties());
+        assertTrue(
+            Timestamp
+                .valueOf(updatedEvent.getProperties().get("last_heartbeat_at"))
+                .after(Timestamp.valueOf(createdEvent.getProperties().get("last_heartbeat_at")))
+        );
         assertEquals(updatedEvent.getType(), EventType.UNPUBLISH_API);
     }
 }

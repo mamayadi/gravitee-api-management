@@ -171,14 +171,14 @@ public class EventsHandler extends AbstractHandler {
             );
     }
 
-    public void createOrUpdate(RoutingContext ctx) {
+    public void createOrUpdateHeartbeat(RoutingContext ctx) {
         ctx
             .vertx()
             .executeBlocking(
                 promise -> {
                     try {
                         Event event = ctx.getBodyAsJson().mapTo(Event.class);
-                        promise.complete(eventRepository.createOrUpdate(event));
+                        promise.complete(eventRepository.createOrUpdateHeartbeat(event));
                     } catch (Exception ex) {
                         LOGGER.error("Unable to create or update an event", ex);
                         promise.fail(ex);

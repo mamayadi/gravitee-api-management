@@ -72,5 +72,5 @@ public interface EventRepository extends CrudRepository<Event, String> {
      */
     List<Event> search(EventCriteria filter);
 
-    Event createOrUpdate(Event event) throws TechnicalException;
+    Event createOrUpdateHeartbeat(Event event) throws TechnicalException;
 }

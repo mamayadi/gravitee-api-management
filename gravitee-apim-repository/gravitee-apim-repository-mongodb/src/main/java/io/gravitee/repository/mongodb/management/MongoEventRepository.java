@@ -25,7 +25,6 @@ import io.gravitee.repository.management.model.EventType;
 import io.gravitee.repository.mongodb.management.internal.event.EventMongoRepository;
 import io.gravitee.repository.mongodb.management.internal.model.EventMongo;
 import io.gravitee.repository.mongodb.management.mapper.GraviteeMapper;
-import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -42,7 +41,6 @@ import org.springframework.stereotype.Component;
 public class MongoEventRepository implements EventRepository {
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
-    private static final String EVENT_LAST_HEARTBEAT_PROPERTY = "last_heartbeat_at";
 
     @Autowired
     private EventMongoRepository internalEventRepo;
@@ -103,14 +101,13 @@ public class MongoEventRepository implements EventRepository {
     }
 
     @Override
-    public Event createOrUpdate(Event event) throws TechnicalException {
+    public Event createOrUpdateHeartbeat(Event event) throws TechnicalException {
         if (event == null || event.getId() == null) {
-            throw new IllegalStateException("Event to update must have an id");
+            throw new IllegalStateException("Event to create or update must have an id");
         }
 
         if (internalEventRepo.existsById(event.getId())) {
-            // TODO: optimize to update only relevant fields (partial update)
-            return update(event);
+            return internalEventRepo.updateHeartbeatEventDate(event);
         }
         return create(event);
     }

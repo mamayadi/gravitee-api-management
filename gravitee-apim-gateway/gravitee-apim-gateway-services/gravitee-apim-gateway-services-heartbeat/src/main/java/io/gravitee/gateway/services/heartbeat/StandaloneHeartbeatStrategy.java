@@ -8,6 +8,7 @@ import io.gravitee.repository.management.api.EventRepository;
 import io.gravitee.repository.management.model.Event;
 import io.gravitee.repository.management.model.EventType;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -72,12 +73,10 @@ public class StandaloneHeartbeatStrategy implements HeartbeatStrategy {
 
         try {
             if (heartbeatEvent == null) {
-                heartbeatEvent = eventRepository.createOrUpdate(prepareEvent.get());
+                heartbeatEvent = eventRepository.createOrUpdateHeartbeat(prepareEvent.get());
             } else {
-                Date updatedAt = new Date();
-                heartbeatEvent.setUpdatedAt(updatedAt);
-                heartbeatEvent.getProperties().put(EVENT_LAST_HEARTBEAT_PROPERTY, Long.toString(updatedAt.getTime()));
-                eventRepository.createOrUpdate(heartbeatEvent);
+                // If heartbeatEvent is known, it means it has already been saved in database, so we can update it with a lite version
+                eventRepository.createOrUpdateHeartbeat(getLiteEvent(heartbeatEvent));
             }
         } catch (Exception ex) {
             LOGGER.warn(
@@ -87,6 +86,21 @@ public class StandaloneHeartbeatStrategy implements HeartbeatStrategy {
                 ex
             );
         }
+    }
+
+    /**
+     * Provides a lite version of the Heartbeat Event to only update date related fields
+     * @param heartbeatEvent the original heartbeat event
+     * @return the lite database
+     */
+    private Event getLiteEvent(Event heartbeatEvent) {
+        Event eventLite = new Event();
+        eventLite.setId(heartbeatEvent.getId());
+        Date updatedAt = new Date();
+        eventLite.setUpdatedAt(updatedAt);
+        eventLite.setProperties(new HashMap<>());
+        eventLite.getProperties().put(EVENT_LAST_HEARTBEAT_PROPERTY, Long.toString(updatedAt.getTime()));
+        return eventLite;
     }
 
     private void sendStopHeartbeatEvent() {

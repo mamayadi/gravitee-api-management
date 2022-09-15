@@ -20,14 +20,20 @@ import io.gravitee.repository.management.api.search.EventCriteria;
 import io.gravitee.repository.management.api.search.Pageable;
 import io.gravitee.repository.management.model.Event;
 import io.gravitee.repository.mongodb.management.internal.model.EventMongo;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.aggregation.*;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.aggregation.AggregationOperation;
+import org.springframework.data.mongodb.core.aggregation.AggregationResults;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 
 /**
  * @author Titouan COMPIEGNE (titouan.compiegne at graviteesource.com)
@@ -124,6 +130,17 @@ public class EventMongoRepositoryImpl implements EventMongoRepositoryCustom {
         List<EventMongo> events = mongoTemplate.find(query, EventMongo.class);
 
         return new Page<>(events, (pageable != null) ? pageable.pageNumber() : 0, events.size(), total);
+    }
+
+    @Override
+    public Event updateHeartbeatEventDate(Event event) {
+        Query query = new Query();
+        query.addCriteria(Criteria.where("id").is(event.getId()));
+        Update update = new Update();
+        update.set("updatedAt", event.getUpdatedAt());
+        update.set("properties.last_heartbeat_at", event.getProperties().get("last_heartbeat_at"));
+        var updateResult = mongoTemplate.updateFirst(query, update, EventMongo.class);
+        return updateResult.getModifiedCount() == 1 ? event : null;
     }
 
     private List<Criteria> buildDBCriteria(EventCriteria criteria) {

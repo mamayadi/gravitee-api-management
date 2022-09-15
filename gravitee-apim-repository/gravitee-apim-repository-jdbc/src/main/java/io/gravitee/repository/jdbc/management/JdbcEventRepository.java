@@ -281,16 +281,34 @@ public class JdbcEventRepository extends JdbcAbstractPageableRepository<Event> i
     }
 
     @Override
-    public Event createOrUpdate(Event event) throws TechnicalException {
+    public Event createOrUpdateHeartbeat(Event event) throws TechnicalException {
         if (event == null || event.getId() == null) {
-            throw new IllegalStateException("Event to update must have an id");
+            throw new IllegalStateException("Event to create or update must have an id");
         }
 
         if (existsById(event.getId())) {
-            // TODO: optimize to update only relevant fields (partial update)
-            return update(event);
+            final int updatedEventCount = updateHeartbeatEventDate(event);
+            int updatedEventPropertyCount = -1;
+            // update properties only if event was correctly updated
+            if (updatedEventCount == 1) {
+                updatedEventPropertyCount = updateHeartbeatEventProperties(event);
+            }
+
+            return updatedEventPropertyCount == 1 ? event : null;
         }
         return create(event);
+    }
+
+    private int updateHeartbeatEventDate(Event event) {
+        return jdbcTemplate.update("update " + this.tableName + " set updated_at = ? where id = ?", event.getUpdatedAt(), event.getId());
+    }
+
+    private int updateHeartbeatEventProperties(Event event) {
+        return jdbcTemplate.update(
+            "update " + EVENT_PROPERTIES + " set property_value = ? where event_id = ? and property_key = 'last_heartbeat_at'",
+            event.getUpdatedAt(),
+            event.getId()
+        );
     }
 
     private boolean existsById(String id) throws TechnicalException {
