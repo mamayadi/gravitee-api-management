@@ -27,12 +27,11 @@ import io.gravitee.gateway.jupiter.api.message.Message;
 import io.gravitee.plugin.endpoint.kafka.configuration.KafkaEndpointConnectorConfiguration;
 import io.gravitee.plugin.endpoint.kafka.vertx.client.consumer.KafkaConsumer;
 import io.gravitee.plugin.endpoint.kafka.vertx.client.consumer.KafkaConsumerRecord;
-import io.gravitee.plugin.endpoint.kafka.vertx.client.producer.KafkaProducer;
-import io.gravitee.plugin.endpoint.kafka.vertx.client.producer.KafkaProducerRecord;
 import io.reactivex.Completable;
 import io.reactivex.Flowable;
 import io.vertx.kafka.client.common.KafkaClientOptions;
 import io.vertx.reactivex.core.Vertx;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -43,10 +42,16 @@ import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
+import reactor.adapter.rxjava.RxJava2Adapter;
+import reactor.core.publisher.Flux;
+import reactor.kafka.sender.KafkaSender;
+import reactor.kafka.sender.SenderOptions;
+import reactor.kafka.sender.SenderRecord;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
@@ -77,116 +82,109 @@ public class KafkaEndpointConnector implements EndpointAsyncConnector {
 
     private Completable prepareProducer(final MessageExecutionContext ctx) {
         if (configuration.getProducer().isEnabled()) {
-            return Completable.defer(
-                () -> {
-                    Map<String, String> config = new HashMap<>();
-                    config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, configuration.getBootstrapServers());
-                    // Set kafka producer properties
-                    config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-                    config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
-                    config.put(ProducerConfig.CLIENT_ID_CONFIG, UUID.randomUUID().toString());
-                    // Classes from reactivex have been imported because of issue with classloading from parent/plugin
-                    KafkaProducer<String, byte[]> producer = createKafka(() -> KafkaProducer.create(getVertx(ctx), config));
-                    Set<String> topics = getTopics(ctx);
-                    return ctx
-                        .request()
-                        .messages()
-                        .flatMapCompletable(
-                            message ->
-                                Flowable
-                                    .fromIterable(overrideTopics(topics, message))
-                                    .flatMapCompletable(
-                                        topic -> {
-                                            KafkaProducerRecord<String, byte[]> kafkaRecord = createKafkaRecord(ctx, message, topic);
-                                            return producer.rxWrite(kafkaRecord);
-                                        }
-                                    )
+            return Completable.defer(() -> {
+                Map<String, Object> config = new HashMap<>();
+                config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, configuration.getBootstrapServers());
+                // Set kafka producer properties
+                config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+                config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class);
+                config.put(ProducerConfig.CLIENT_ID_CONFIG, UUID.randomUUID().toString());
+                KafkaSender<String, byte[]> kafkaSender = KafkaSender.create(SenderOptions.create(config));
+                Set<String> topics = getTopics(ctx);
+                return ctx
+                    .request()
+                    .messages()
+                    .flatMapCompletable(message ->
+                        RxJava2Adapter.monoToCompletable(
+                            kafkaSender
+                                .send(
+                                    Flux
+                                        .fromIterable(overrideTopics(topics, message))
+                                        .map(topic -> SenderRecord.create(createProducerRecord(ctx, message, topic), null))
+                                )
+                                .ignoreElements()
                         )
-                        .andThen(producer.rxClose());
-                }
-            );
+                    )
+                    .doFinally(kafkaSender::close);
+            });
         } else {
             return Completable.complete();
         }
     }
 
-    private KafkaProducerRecord<String, byte[]> createKafkaRecord(
+    private ProducerRecord<String, byte[]> createProducerRecord(
         final MessageExecutionContext ctx,
         final Message message,
         final String topic
     ) {
-        KafkaProducerRecord<String, byte[]> producerRecord = KafkaProducerRecord.create(topic, getKey(ctx), message.content().getBytes());
+        ProducerRecord<String, byte[]> producerRecord = new ProducerRecord<>(topic, getKey(ctx, message), message.content().getBytes());
         if (message.headers() != null) {
-            message.headers().forEach(headerEntry -> producerRecord.addHeader(headerEntry.getKey(), headerEntry.getValue()));
+            message
+                .headers()
+                .forEach(headerEntry ->
+                    producerRecord.headers().add(headerEntry.getKey(), headerEntry.getValue().getBytes(StandardCharsets.UTF_8))
+                );
         }
         return producerRecord;
     }
 
     private Completable prepareConsumer(final MessageExecutionContext ctx) {
-        return Completable.fromRunnable(
-            () -> {
-                if (configuration.getConsumer().isEnabled()) {
-                    ctx
-                        .response()
-                        .messages(
-                            Flowable.defer(
-                                () -> {
-                                    Map<String, Object> config = new HashMap<>();
-                                    config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, configuration.getBootstrapServers());
-                                    KafkaEndpointConnectorConfiguration.Consumer configurationConsumer = configuration.getConsumer();
-                                    config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, configurationConsumer.getAutoOffsetReset());
+        return Completable.fromRunnable(() -> {
+            if (configuration.getConsumer().isEnabled()) {
+                ctx
+                    .response()
+                    .messages(
+                        Flowable.defer(() -> {
+                            Map<String, Object> config = new HashMap<>();
+                            config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, configuration.getBootstrapServers());
+                            KafkaEndpointConnectorConfiguration.Consumer configurationConsumer = configuration.getConsumer();
+                            config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, configurationConsumer.getAutoOffsetReset());
 
-                                    // Set kafka consumer properties
-                                    config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-                                    config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class);
+                            // Set kafka consumer properties
+                            config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+                            config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class);
 
-                                    String groupId = getGroupId(ctx);
-                                    config.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
-                                    String instanceId = UUID.randomUUID().toString();
-                                    config.put(ConsumerConfig.GROUP_INSTANCE_ID_CONFIG, instanceId);
-                                    config.put(ConsumerConfig.CLIENT_ID_CONFIG, instanceId);
-                                    // Classes from reactivex have been imported because of issue while loading reactivex classes due to classloading from node/plugin separation
-                                    KafkaConsumer<String, byte[]> consumer = createKafka(
-                                        () -> KafkaConsumer.create(getVertx(ctx), new KafkaClientOptions().setConfig(config))
-                                    );
-                                    return consumer
-                                        .subscribe(getTopics(ctx))
-                                        .toFlowable()
-                                        .map(
-                                            consumerRecord -> {
-                                                HttpHeaders httpHeaders = HttpHeaders.create();
-                                                consumerRecord
-                                                    .headers()
-                                                    .forEach(
-                                                        kafkaHeader -> httpHeaders.add(kafkaHeader.key(), kafkaHeader.value().toString())
-                                                    );
-                                                return DefaultMessage
-                                                    .builder()
-                                                    .id(generateId(consumerRecord))
-                                                    .headers(httpHeaders)
-                                                    .content(Buffer.buffer(consumerRecord.value()))
-                                                    .metadata(
-                                                        Map.of(
-                                                            "key",
-                                                            consumerRecord.key(),
-                                                            "topic",
-                                                            consumerRecord.topic(),
-                                                            "partition",
-                                                            consumerRecord.partition(),
-                                                            "offset",
-                                                            consumerRecord.offset()
-                                                        )
-                                                    )
-                                                    .build();
-                                            }
+                            String groupId = getGroupId(ctx);
+                            config.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
+                            String instanceId = UUID.randomUUID().toString();
+                            config.put(ConsumerConfig.GROUP_INSTANCE_ID_CONFIG, instanceId);
+                            config.put(ConsumerConfig.CLIENT_ID_CONFIG, instanceId);
+                            // Classes from reactivex have been imported because of issue while loading reactivex classes due to classloading from node/plugin separation
+                            KafkaConsumer<String, byte[]> consumer = createKafka(() ->
+                                KafkaConsumer.create(getVertx(ctx), new KafkaClientOptions().setConfig(config))
+                            );
+                            return consumer
+                                .subscribe(getTopics(ctx))
+                                .toFlowable()
+                                .map(consumerRecord -> {
+                                    HttpHeaders httpHeaders = HttpHeaders.create();
+                                    consumerRecord
+                                        .headers()
+                                        .forEach(kafkaHeader -> httpHeaders.add(kafkaHeader.key(), kafkaHeader.value().toString()));
+                                    return DefaultMessage
+                                        .builder()
+                                        .id(generateId(consumerRecord))
+                                        .headers(httpHeaders)
+                                        .content(Buffer.buffer(consumerRecord.value()))
+                                        .metadata(
+                                            Map.of(
+                                                "key",
+                                                consumerRecord.key(),
+                                                "topic",
+                                                consumerRecord.topic(),
+                                                "partition",
+                                                consumerRecord.partition(),
+                                                "offset",
+                                                consumerRecord.offset()
+                                            )
                                         )
-                                        .doFinally(consumer::close);
-                                }
-                            )
-                        );
-                }
+                                        .build();
+                                })
+                                .doFinally(consumer::close);
+                        })
+                    );
             }
-        );
+        });
     }
 
     private String generateId(final KafkaConsumerRecord<String, byte[]> consumerRecord) {
@@ -245,13 +243,15 @@ public class KafkaEndpointConnector implements EndpointAsyncConnector {
         return Set.of();
     }
 
-    private String getKey(final MessageExecutionContext ctx) {
-        String key = ctx.getAttribute(CONTEXT_ATTRIBUTE_KAFKA_RECORD_KEY);
+    private String getKey(final MessageExecutionContext ctx, final Message message) {
+        String key = message.attribute(CONTEXT_ATTRIBUTE_KAFKA_RECORD_KEY);
         if (key == null) {
-            key = UUID.randomUUID().toString();
-            ctx.setAttribute(CONTEXT_ATTRIBUTE_KAFKA_RECORD_KEY, key);
+            key = ctx.getAttribute(CONTEXT_ATTRIBUTE_KAFKA_RECORD_KEY);
+            if (key == null) {
+                key = message.id();
+                ctx.setAttribute(CONTEXT_ATTRIBUTE_KAFKA_RECORD_KEY, key);
+            }
         }
-
         return key;
     }
 

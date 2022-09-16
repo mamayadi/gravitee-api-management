@@ -16,9 +16,19 @@
 package io.gravitee.plugin.entrypoint.http.post.configuration;
 
 import io.gravitee.gateway.jupiter.api.connector.entrypoint.EntrypointConnectorConfiguration;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
  * @author GraviteeSource Team
  */
-public class HttpPostEntrypointConnectorConfiguration implements EntrypointConnectorConfiguration {}
+@Getter
+@Setter
+public class HttpPostEntrypointConnectorConfiguration implements EntrypointConnectorConfiguration {
+
+    /**
+     * Allow adding incoming request headers to the generated message
+     */
+    private boolean requestHeadersToMessage;
+}
