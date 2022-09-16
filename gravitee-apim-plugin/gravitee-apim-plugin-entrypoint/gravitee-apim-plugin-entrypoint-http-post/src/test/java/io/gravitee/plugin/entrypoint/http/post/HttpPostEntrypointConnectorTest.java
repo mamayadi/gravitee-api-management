@@ -48,7 +48,7 @@ class HttpPostEntrypointConnectorTest {
 
     @BeforeEach
     void beforeEach() {
-        httpPostEntrypointConnector = new HttpPostEntrypointConnector();
+        httpPostEntrypointConnector = new HttpPostEntrypointConnector(null);
     }
 
     @Test

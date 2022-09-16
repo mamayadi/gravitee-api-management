@@ -16,20 +16,15 @@
 package io.gravitee.plugin.entrypoint.http.post;
 
 import io.gravitee.common.http.HttpMethod;
-import io.gravitee.gateway.api.buffer.Buffer;
 import io.gravitee.gateway.api.http.HttpHeaders;
-import io.gravitee.gateway.jupiter.api.ApiType;
 import io.gravitee.gateway.jupiter.api.ConnectorMode;
 import io.gravitee.gateway.jupiter.api.ListenerType;
 import io.gravitee.gateway.jupiter.api.connector.entrypoint.async.EntrypointAsyncConnector;
 import io.gravitee.gateway.jupiter.api.context.ExecutionContext;
-import io.gravitee.gateway.jupiter.api.context.MessageExecutionContext;
 import io.gravitee.gateway.jupiter.api.message.DefaultMessage;
 import io.gravitee.gateway.jupiter.api.message.Message;
+import io.gravitee.plugin.entrypoint.http.post.configuration.HttpPostEntrypointConnectorConfiguration;
 import io.reactivex.Completable;
-import io.reactivex.Flowable;
-import io.reactivex.Maybe;
-import java.util.Map;
 import java.util.Set;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,11 +33,18 @@ import lombok.extern.slf4j.Slf4j;
  * @author Florent CHAMFROY (florent.chamfroy at graviteesource.com)
  * @author GraviteeSource Team
  */
-@NoArgsConstructor
 @Slf4j
 public class HttpPostEntrypointConnector implements EntrypointAsyncConnector {
 
     static final Set<ConnectorMode> SUPPORTED_MODES = Set.of(ConnectorMode.PUBLISH);
+    private HttpPostEntrypointConnectorConfiguration configuration;
+
+    public HttpPostEntrypointConnector(final HttpPostEntrypointConnectorConfiguration configuration) {
+        this.configuration = configuration;
+        if (this.configuration == null) {
+            this.configuration = new HttpPostEntrypointConnectorConfiguration();
+        }
+    }
 
     @Override
     public Set<ConnectorMode> supportedModes() {
@@ -66,20 +68,22 @@ public class HttpPostEntrypointConnector implements EntrypointAsyncConnector {
 
     @Override
     public Completable handleRequest(final ExecutionContext ctx) {
-        return Completable.fromRunnable(
-            () ->
-                ctx
-                    .request()
-                    .messages(
-                        ctx
-                            .request()
-                            .body()
-                            .<Message>map(
-                                buffer ->
-                                    DefaultMessage.builder().headers(HttpHeaders.create(ctx.request().headers())).content(buffer).build()
-                            )
-                            .toFlowable()
-                    )
+        return Completable.fromRunnable(() ->
+            ctx
+                .request()
+                .messages(
+                    ctx
+                        .request()
+                        .body()
+                        .<Message>map(buffer -> {
+                            DefaultMessage.DefaultMessageBuilder messageBuilder = DefaultMessage.builder().content(buffer);
+                            if (configuration.isRequestHeadersToMessage()) {
+                                messageBuilder.headers(HttpHeaders.create(ctx.request().headers()));
+                            }
+                            return messageBuilder.build();
+                        })
+                        .toFlowable()
+                )
         );
     }
 
