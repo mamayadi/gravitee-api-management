@@ -91,21 +91,23 @@ public class KafkaEndpointConnector implements EndpointAsyncConnector {
                 config.put(ProducerConfig.CLIENT_ID_CONFIG, UUID.randomUUID().toString());
                 KafkaSender<String, byte[]> kafkaSender = KafkaSender.create(SenderOptions.create(config));
                 Set<String> topics = getTopics(ctx);
-                return ctx
-                    .request()
-                    .messages()
-                    .flatMapCompletable(message ->
-                        RxJava2Adapter.monoToCompletable(
-                            kafkaSender
-                                .send(
-                                    Flux
-                                        .fromIterable(overrideTopics(topics, message))
-                                        .map(topic -> SenderRecord.create(createProducerRecord(ctx, message, topic), null))
-                                )
-                                .ignoreElements()
+
+                return RxJava2Adapter.monoToCompletable(
+                    kafkaSender
+                        .send(
+                            RxJava2Adapter.flowableToFlux(
+                                ctx
+                                    .request()
+                                    .messages()
+                                    .flatMap(message ->
+                                        Flux
+                                            .fromIterable(overrideTopics(topics, message))
+                                            .map(topic -> SenderRecord.create(createProducerRecord(ctx, message, topic), null))
+                                    )
+                            )
                         )
-                    )
-                    .doFinally(kafkaSender::close);
+                        .ignoreElements()
+                );
             });
         } else {
             return Completable.complete();
