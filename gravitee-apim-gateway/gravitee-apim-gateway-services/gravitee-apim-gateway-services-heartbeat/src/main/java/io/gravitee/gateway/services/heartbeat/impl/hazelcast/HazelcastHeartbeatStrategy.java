@@ -1,7 +1,8 @@
-package io.gravitee.gateway.services.heartbeat;
+package io.gravitee.gateway.services.heartbeat.impl.hazelcast;
 
 import static io.gravitee.gateway.services.heartbeat.HeartbeatService.*;
 
+import io.gravitee.gateway.services.heartbeat.HeartbeatStrategy;
 import io.gravitee.gateway.services.heartbeat.spring.configuration.HeartbeatDependencies;
 import io.gravitee.node.api.cluster.ClusterManager;
 import io.gravitee.node.api.message.Message;
@@ -71,13 +72,13 @@ public class HazelcastHeartbeatStrategy implements HeartbeatStrategy, MessageCon
 
         executorService = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "gio-heartbeat"));
 
-        HeartbeatThread monitorThread = new HeartbeatThread(topic, heartbeatEvent);
+        HeartbeatThread heartbeatThread = new HeartbeatThread(topic, heartbeatEvent);
 
-        subscriptionFailureId = topicFailure.addMessageConsumer(monitorThread);
+        subscriptionFailureId = topicFailure.addMessageConsumer(heartbeatThread);
 
         LOGGER.info("Monitoring scheduled with fixed delay {} {} ", delay, unit.name());
 
-        ((ScheduledExecutorService) executorService).scheduleWithFixedDelay(monitorThread, delay, delay, unit);
+        ((ScheduledExecutorService) executorService).scheduleWithFixedDelay(heartbeatThread, delay, delay, unit);
 
         LOGGER.info("Start gateway heartbeat: DONE");
     }

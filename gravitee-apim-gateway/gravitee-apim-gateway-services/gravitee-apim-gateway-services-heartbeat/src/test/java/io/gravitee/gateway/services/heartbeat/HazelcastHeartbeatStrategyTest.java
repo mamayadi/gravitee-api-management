@@ -21,6 +21,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 import io.gravitee.common.utils.UUID;
+import io.gravitee.gateway.services.heartbeat.impl.hazelcast.HazelcastHeartbeatStrategy;
 import io.gravitee.gateway.services.heartbeat.spring.configuration.HeartbeatDependencies;
 import io.gravitee.node.api.cluster.ClusterManager;
 import io.gravitee.node.api.message.Message;

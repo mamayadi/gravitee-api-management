@@ -1,8 +1,9 @@
-package io.gravitee.gateway.services.heartbeat;
+package io.gravitee.gateway.services.heartbeat.impl.standalone;
 
 import static io.gravitee.gateway.services.heartbeat.HeartbeatService.EVENT_LAST_HEARTBEAT_PROPERTY;
 import static io.gravitee.gateway.services.heartbeat.HeartbeatService.EVENT_STOPPED_AT_PROPERTY;
 
+import io.gravitee.gateway.services.heartbeat.HeartbeatStrategy;
 import io.gravitee.gateway.services.heartbeat.spring.configuration.HeartbeatDependencies;
 import io.gravitee.repository.management.api.EventRepository;
 import io.gravitee.repository.management.model.Event;

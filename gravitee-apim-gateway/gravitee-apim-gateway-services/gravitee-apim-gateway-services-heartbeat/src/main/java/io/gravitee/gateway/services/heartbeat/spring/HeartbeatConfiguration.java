@@ -17,9 +17,9 @@ package io.gravitee.gateway.services.heartbeat.spring;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.gravitee.gateway.env.GatewayConfiguration;
-import io.gravitee.gateway.services.heartbeat.HazelcastHeartbeatStrategy;
+import io.gravitee.gateway.services.heartbeat.impl.hazelcast.HazelcastHeartbeatStrategy;
 import io.gravitee.gateway.services.heartbeat.HeartbeatStrategy;
-import io.gravitee.gateway.services.heartbeat.StandaloneHeartbeatStrategy;
+import io.gravitee.gateway.services.heartbeat.impl.standalone.StandaloneHeartbeatStrategy;
 import io.gravitee.gateway.services.heartbeat.spring.configuration.HeartbeatDependencies;
 import io.gravitee.node.api.Node;
 import io.gravitee.node.api.cluster.ClusterManager;

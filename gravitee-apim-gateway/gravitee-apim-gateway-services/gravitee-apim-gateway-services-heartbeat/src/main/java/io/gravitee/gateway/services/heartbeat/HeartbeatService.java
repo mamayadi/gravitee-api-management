@@ -48,11 +48,11 @@ public class HeartbeatService extends AbstractService<HeartbeatService> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HeartbeatService.class);
 
-    static final String EVENT_LAST_HEARTBEAT_PROPERTY = "last_heartbeat_at";
-    static final String EVENT_STARTED_AT_PROPERTY = "started_at";
-    static final String EVENT_STOPPED_AT_PROPERTY = "stopped_at";
-    static final String EVENT_ID_PROPERTY = "id";
-    static final String EVENT_STATE_PROPERTY = "create";
+    public static final String EVENT_LAST_HEARTBEAT_PROPERTY = "last_heartbeat_at";
+    public static final String EVENT_STARTED_AT_PROPERTY = "started_at";
+    public static final String EVENT_STOPPED_AT_PROPERTY = "stopped_at";
+    public static final String EVENT_ID_PROPERTY = "id";
+    public static final String EVENT_STATE_PROPERTY = "create";
 
     private final HeartbeatStrategy heartbeatStrategy;
     private final boolean enabled;

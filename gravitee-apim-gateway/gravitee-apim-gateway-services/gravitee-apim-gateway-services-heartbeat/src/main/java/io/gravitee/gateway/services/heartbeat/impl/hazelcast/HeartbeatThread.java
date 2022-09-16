@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.gateway.services.heartbeat;
+package io.gravitee.gateway.services.heartbeat.impl.hazelcast;
 
 import static io.gravitee.gateway.services.heartbeat.HeartbeatService.EVENT_LAST_HEARTBEAT_PROPERTY;
 import static io.gravitee.gateway.services.heartbeat.HeartbeatService.EVENT_STATE_PROPERTY;
