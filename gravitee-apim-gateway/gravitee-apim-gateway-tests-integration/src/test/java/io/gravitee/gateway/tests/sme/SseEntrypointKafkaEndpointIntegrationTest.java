@@ -14,6 +14,8 @@ package io.gravitee.gateway.tests.sme;/**
  * limitations under the License.
  */
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import io.gravitee.apim.gateway.tests.sdk.AbstractGatewayTest;
 import io.gravitee.apim.gateway.tests.sdk.annotations.DeployApi;
 import io.gravitee.apim.gateway.tests.sdk.annotations.GatewayTest;
@@ -34,6 +36,12 @@ import io.vertx.reactivex.core.Vertx;
 import io.vertx.reactivex.core.buffer.Buffer;
 import io.vertx.reactivex.core.http.HttpClient;
 import io.vertx.reactivex.core.http.HttpClientResponse;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -48,15 +56,6 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.shaded.com.google.common.collect.ImmutableMap;
 import org.testcontainers.utility.DockerImageName;
-
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Yann TAVERNIER (yann.tavernier at graviteesource.com)
@@ -85,23 +84,26 @@ class SseEntrypointKafkaEndpointIntegrationTest extends AbstractGatewayTest {
     public void configureApi(ReactableApi<?> api, Class<?> definitionClass) {
         if (definitionClass.isAssignableFrom(Api.class)) {
             Api apiDefinition = (Api) api.getDefinition();
-            apiDefinition.getEndpointGroups()
-                    .stream()
-                    .flatMap(eg -> eg.getEndpoints().stream())
-                    .filter(endpoint -> endpoint.getType().equals("kafka"))
-                    .forEach(endpoint -> {
+            apiDefinition
+                .getEndpointGroups()
+                .stream()
+                .flatMap(eg -> eg.getEndpoints().stream())
+                .filter(endpoint -> endpoint.getType().equals("kafka"))
+                .forEach(
+                    endpoint -> {
                         endpoint.setConfiguration(endpoint.getConfiguration().replace("bootstrap-server", kafka.getBootstrapServers()));
-                    });
+                    }
+                );
         }
     }
 
     @BeforeEach
     void setUp() throws ExecutionException, InterruptedException, TimeoutException {
-
-        try (AdminClient adminClient = AdminClient.create(
+        try (
+            AdminClient adminClient = AdminClient.create(
                 ImmutableMap.of(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers())
-        )) {
-
+            )
+        ) {
             Collection<NewTopic> topics = List.of(new NewTopic("test-topic", 1, (short) 1));
             adminClient.createTopics(topics).all().get(30, TimeUnit.SECONDS);
         }
@@ -110,7 +112,6 @@ class SseEntrypointKafkaEndpointIntegrationTest extends AbstractGatewayTest {
     @Test
     @DisplayName("Should deploy a V4 API with an SSE entrypoint and Kafka endpoint")
     void shouldBeAbleToSubscribeToKafkaEndpointWithSSEEntrypoint(HttpClient httpClient, Vertx vertx) {
-
         // In order to simplify the test, Kafka endpoint's consumer is configured with "autoOffsetReset": "earliest"
         // It allows us to publish the messages in the topic before opening the api connection through SSE entrypoint.
         KafkaProducer<String, byte[]> producer = getKafkaProducer(vertx);
@@ -129,7 +130,6 @@ class SseEntrypointKafkaEndpointIntegrationTest extends AbstractGatewayTest {
             )
             .flatMapPublisher(HttpClientResponse::toFlowable)
             .test();
-
 
         // We expect 4 chunks, 1 retry message and 3 messages
         obs
@@ -173,9 +173,12 @@ class SseEntrypointKafkaEndpointIntegrationTest extends AbstractGatewayTest {
      */
     private static KafkaProducer<String, byte[]> getKafkaProducer(Vertx vertx) {
         Map<String, String> config = Map.of(
-                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers(),
-                ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName(),
-                ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName()
+            ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
+            kafka.getBootstrapServers(),
+            ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+            StringSerializer.class.getName(),
+            ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+            ByteArraySerializer.class.getName()
         );
 
         return KafkaProducer.create(vertx, config);
@@ -183,8 +186,8 @@ class SseEntrypointKafkaEndpointIntegrationTest extends AbstractGatewayTest {
 
     private static RecordMetadata publishMessage(KafkaProducer<String, byte[]> producer, String message1) {
         return producer
-                .rxSend(KafkaProducerRecord.create("test-topic", "key", io.gravitee.gateway.api.buffer.Buffer.buffer(message1).getBytes()))
-                .blockingGet();
+            .rxSend(KafkaProducerRecord.create("test-topic", "key", io.gravitee.gateway.api.buffer.Buffer.buffer(message1).getBytes()))
+            .blockingGet();
     }
 
     private void assertRetry(Buffer chunk) {
