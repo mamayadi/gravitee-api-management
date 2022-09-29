@@ -28,8 +28,6 @@ import io.gravitee.rest.api.service.InstallationService;
 import io.gravitee.rest.api.service.configuration.flow.FlowService;
 import java.util.Map;
 import java.util.function.Function;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;

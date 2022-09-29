@@ -248,6 +248,12 @@
             </dependency>
 
             <dependency>
+                <groupId>io.gravitee.node.services</groupId>
+                <artifactId>gravitee-node-services-upgrader</artifactId>
+                <version>${gravitee-node.version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>io.gravitee.notifier</groupId>
                 <artifactId>gravitee-notifier-api</artifactId>
                 <version>${gravitee-notifier-api.version}</version>
