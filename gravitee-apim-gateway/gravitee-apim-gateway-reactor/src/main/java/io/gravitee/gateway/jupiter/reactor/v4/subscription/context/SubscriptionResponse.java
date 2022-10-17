@@ -136,7 +136,7 @@ public class SubscriptionResponse implements MutableResponse {
     @Override
     public Completable onChunks(FlowableTransformer<Buffer, Buffer> onChunks) {
         if (chunks == null) {
-            return Completable.error(new IllegalStateException("The is no chunks to apply the transformation on"));
+            return Completable.error(new IllegalStateException("There is no chunks to apply the transformation on"));
         }
         return Completable.fromRunnable(() -> chunks = chunks.compose(onChunks));
     }
