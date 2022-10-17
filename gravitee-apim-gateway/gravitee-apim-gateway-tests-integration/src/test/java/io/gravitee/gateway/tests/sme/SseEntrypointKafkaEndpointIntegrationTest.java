@@ -128,7 +128,10 @@ class SseEntrypointKafkaEndpointIntegrationTest extends AbstractGatewayTest {
                     return request.rxSend();
                 }
             )
-            .flatMapPublisher(HttpClientResponse::toFlowable)
+            .flatMapPublisher(response -> {
+                assertThat(response.statusCode()).isEqualTo(200);
+                return response.toFlowable();
+            })
             .test();
 
         // We expect 4 chunks, 1 retry message and 3 messages

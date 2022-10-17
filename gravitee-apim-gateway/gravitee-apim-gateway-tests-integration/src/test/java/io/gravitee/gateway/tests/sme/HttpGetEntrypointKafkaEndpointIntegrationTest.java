@@ -14,44 +14,38 @@ package io.gravitee.gateway.tests.sme;/**
  * limitations under the License.
  */
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import io.gravitee.apim.gateway.tests.sdk.AbstractGatewayTest;
 import io.gravitee.apim.gateway.tests.sdk.annotations.DeployApi;
 import io.gravitee.apim.gateway.tests.sdk.annotations.GatewayTest;
 import io.gravitee.apim.gateway.tests.sdk.configuration.GatewayConfigurationBuilder;
 import io.gravitee.apim.gateway.tests.sdk.connector.EndpointBuilder;
 import io.gravitee.apim.gateway.tests.sdk.connector.EntrypointBuilder;
+import io.gravitee.common.http.MediaType;
 import io.gravitee.definition.model.v4.Api;
+import io.gravitee.gateway.api.http.HttpHeaderNames;
 import io.gravitee.gateway.reactor.ReactableApi;
 import io.gravitee.plugin.endpoint.EndpointConnectorPlugin;
 import io.gravitee.plugin.endpoint.kafka.KafkaEndpointConnectorFactory;
-import io.gravitee.plugin.endpoint.kafka.vertx.client.consumer.KafkaConsumer;
-import io.gravitee.plugin.endpoint.kafka.vertx.client.consumer.KafkaConsumerRecord;
-import io.gravitee.plugin.endpoint.kafka.vertx.client.producer.KafkaHeader;
+import io.gravitee.plugin.endpoint.kafka.vertx.client.producer.KafkaProducer;
+import io.gravitee.plugin.endpoint.kafka.vertx.client.producer.KafkaProducerRecord;
 import io.gravitee.plugin.entrypoint.EntrypointConnectorPlugin;
-import io.gravitee.plugin.entrypoint.http.post.HttpPostEntrypointConnectorFactory;
+import io.gravitee.plugin.entrypoint.http.get.HttpGetEntrypointConnectorFactory;
 import io.reactivex.observers.TestObserver;
 import io.reactivex.subscribers.TestSubscriber;
-import io.vertx.core.json.JsonObject;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.kafka.client.producer.RecordMetadata;
 import io.vertx.reactivex.core.Vertx;
 import io.vertx.reactivex.core.buffer.Buffer;
+import io.vertx.reactivex.core.http.HttpClient;
+import io.vertx.reactivex.core.http.HttpClientResponse;
 import io.vertx.reactivex.ext.web.client.HttpResponse;
 import io.vertx.reactivex.ext.web.client.WebClient;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.common.serialization.ByteArrayDeserializer;
-import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.serialization.ByteArraySerializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -61,18 +55,26 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.shaded.com.google.common.collect.ImmutableMap;
 import org.testcontainers.utility.DockerImageName;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
 /**
  * @author Yann TAVERNIER (yann.tavernier at graviteesource.com)
  * @author GraviteeSource Team
  */
 @Testcontainers
 @GatewayTest
-@DeployApi({ "/apis/v4/http-post-entrypoint-kafka-endpoint.json" })
-class HttpPostEntrypointKafkaEndpointIntegrationTest extends AbstractGatewayTest {
+@DeployApi({ "/apis/v4/http-get-entrypoint-kafka-endpoint.json" })
+class HttpGetEntrypointKafkaEndpointIntegrationTest extends AbstractGatewayTest {
 
     @Container
     private static final KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:6.2.1"));
-
     public static final String TEST_TOPIC = "test-topic";
 
     @Override
@@ -82,7 +84,7 @@ class HttpPostEntrypointKafkaEndpointIntegrationTest extends AbstractGatewayTest
 
     @Override
     public void configureEntrypoints(Map<String, EntrypointConnectorPlugin<?, ?>> entrypoints) {
-        entrypoints.putIfAbsent("http-post", EntrypointBuilder.build("http-post", HttpPostEntrypointConnectorFactory.class));
+        entrypoints.putIfAbsent("http-get", EntrypointBuilder.build("http-get", HttpGetEntrypointConnectorFactory.class));
     }
 
     @Override
@@ -121,66 +123,67 @@ class HttpPostEntrypointKafkaEndpointIntegrationTest extends AbstractGatewayTest
     }
 
     @Test
-    @DisplayName("Should deploy a V4 API with a HTTP Post entrypoint and Kafka endpoint")
-    void shouldBeAbleToSubscribeToKafkaEndpointWithHTTPPostEntrypoint(WebClient client, Vertx vertx) {
-        JsonObject requestBody = new JsonObject();
-        requestBody.put("field", "value");
+    @DisplayName("Should deploy a V4 API with a HTTP Get entrypoint and Kafka endpoint")
+    void shouldBeAbleToSubscribeToKafkaEndpointWithHTTPGetEntrypoint(WebClient client, Vertx vertx) {
+        // In order to simplify the test, Kafka endpoint's consumer is configured with "autoOffsetReset": "earliest"
+        // It allows us to publish the messages in the topic before opening the api connection through SSE entrypoint.
+        KafkaProducer<String, byte[]> producer = getKafkaProducer(vertx);
+        final RecordMetadata recordMetadata1 = publishMessage(producer, "message1");
+        final RecordMetadata recordMetadata2 = publishMessage(producer, "message2");
+        final RecordMetadata recordMetadata3 = publishMessage(producer, "message3");
+        producer.close();
 
+        // tester avec le HttpClient
         final TestObserver<HttpResponse<Buffer>> obs = client
-            .post("/test")
-            .putHeader("X-Test-Header", "header-value")
-            .rxSendJsonObject(requestBody)
-            .test();
+                .get("/test")
+                .putHeader(HttpHeaderNames.ACCEPT.toString(), MediaType.APPLICATION_JSON)
+                .rxSend()
+                .test();
 
         awaitTerminalEvent(obs)
             .assertComplete()
-            .assertValue(
-                response -> {
+                .assertValue(response -> {
                     assertThat(response.statusCode()).isEqualTo(200);
                     return true;
-                }
-            )
-            .assertNoErrors();
+                });
 
-        // Configure a KafkaConsumer to read messages published on topic test-topic.
-        KafkaConsumer<String, byte[]> kafkaConsumer = getKafkaConsumer(vertx);
-        io.vertx.kafka.client.common.TopicPartition topicPartition = new io.vertx.kafka.client.common.TopicPartition(TEST_TOPIC, 0);
-        TestSubscriber<KafkaConsumerRecord<String, byte[]>> testSubscriber = kafkaConsumer
-            .assign(topicPartition)
-            .rxSeekToBeginning(topicPartition)
-            .andThen(kafkaConsumer.toFlowable())
-            .take(1)
-            .test();
-        testSubscriber.awaitTerminalEvent(10, TimeUnit.SECONDS);
-
-        testSubscriber
-            .assertValueCount(1)
-            .assertValueAt(
-                0,
-                message -> {
-                    assertThat(message.headers()).contains(KafkaHeader.header("X-Test-Header", "header-value"));
-                    final io.vertx.kafka.client.consumer.KafkaConsumerRecord kafkaConsumerRecord = message.getDelegate();
-                    assertThat(kafkaConsumerRecord.value()).isEqualTo(requestBody.toBuffer().getBytes());
-                    return true;
-                }
-            );
-        kafkaConsumer.close();
     }
 
     /**
-     * Creates a KafkaConsumer to be able to read messages from topic
+     * Creates a KafkaProducer to be able to publish messages to topic
      * @param vertx
      * @return
      */
-    private static KafkaConsumer<String, byte[]> getKafkaConsumer(Vertx vertx) {
-        Map<String, String> config = new HashMap<>();
-        config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
-        config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
-        config.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
-        config.put(ConsumerConfig.CLIENT_ID_CONFIG, UUID.randomUUID().toString());
-        config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        KafkaConsumer<String, byte[]> kafkaConsumer = KafkaConsumer.create(vertx, config);
-        return kafkaConsumer;
+    private static KafkaProducer<String, byte[]> getKafkaProducer(Vertx vertx) {
+        Map<String, String> config = Map.of(
+            ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
+            kafka.getBootstrapServers(),
+            ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+            StringSerializer.class.getName(),
+            ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+            ByteArraySerializer.class.getName()
+        );
+
+        return KafkaProducer.create(vertx, config);
+    }
+
+    private static RecordMetadata publishMessage(KafkaProducer<String, byte[]> producer, String message1) {
+        return producer
+            .rxSend(KafkaProducerRecord.create(TEST_TOPIC, "key", io.gravitee.gateway.api.buffer.Buffer.buffer(message1).getBytes()))
+            .blockingGet();
+    }
+
+    private void assertRetry(Buffer chunk) {
+        final String[] splitMessage = chunk.toString().split("\n");
+        assertThat(splitMessage).hasSize(1);
+        assertThat(splitMessage[0]).startsWith("retry: ");
+    }
+
+    private void assertOnMessage(Buffer chunk, int messageNumber, RecordMetadata publishMetadate) {
+        final String[] splitMessage = chunk.toString().split("\n");
+        assertThat(splitMessage).hasSize(3);
+        assertThat(splitMessage[0]).startsWith("id: key-" + publishMetadate.getPartition() + "-" + publishMetadate.getOffset());
+        assertThat(splitMessage[1]).isEqualTo("event: message");
+        assertThat(splitMessage[2]).isEqualTo("data: message" + messageNumber);
     }
 }
