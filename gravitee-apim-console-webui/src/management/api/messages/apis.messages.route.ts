@@ -19,21 +19,40 @@ export default apisMessagesRouterConfig;
 
 function apisMessagesRouterConfig($stateProvider) {
   'ngInject';
-  $stateProvider.state('management.apis.detail.messages', {
-    url: '/messages',
-    component: 'messages',
-    resolve: {
-      resolvedScope: () => 'APPLICATION',
-      resolvedApiId: ($stateParams) => $stateParams.apiId,
-      resolvedRoles: (RoleService: RoleService) => RoleService.list('APPLICATION'),
-    },
-    data: {
-      perms: {
-        only: ['api-message-c'],
+  $stateProvider
+    .state('management.apis.detail.ng-messages', {
+      url: '/ng-messages',
+      component: 'ngApiMessages',
+      resolve: {
+        resolvedScope: () => 'APPLICATION',
+        resolvedApiId: ($stateParams) => $stateParams.apiId,
+        resolvedRoles: (RoleService: RoleService) => RoleService.list('APPLICATION'),
       },
-      docs: {
-        page: 'management-messages',
+      data: {
+        useAngularMaterial: true,
+        perms: {
+          only: ['api-message-c'],
+        },
+        docs: {
+          page: 'management-messages',
+        },
       },
-    },
-  });
+    })
+    .state('management.apis.detail.messages', {
+      url: '/messages',
+      component: 'messages',
+      resolve: {
+        resolvedScope: () => 'APPLICATION',
+        resolvedApiId: ($stateParams) => $stateParams.apiId,
+        resolvedRoles: (RoleService: RoleService) => RoleService.list('APPLICATION'),
+      },
+      data: {
+        perms: {
+          only: ['api-message-c'],
+        },
+        docs: {
+          page: 'management-messages',
+        },
+      },
+    });
 }

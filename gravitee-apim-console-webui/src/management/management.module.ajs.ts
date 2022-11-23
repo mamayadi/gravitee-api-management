@@ -542,6 +542,7 @@ import { SettingsNavigationComponent } from './configuration/settings-navigation
 import { ApplicationNavigationComponent } from './application/details/application-navigation/application-navigation.component';
 import { ApiNavigationComponent } from './api/api-navigation/api-navigation.component';
 import { ApiProxyHealthCheckComponent } from './api/proxy/health-check/api-proxy-health-check.component';
+import { ApiMessagesComponent } from './api/messages/api-messages.component';
 
 (<any>window).moment = moment;
 require('angular-moment-picker');
@@ -1007,6 +1008,7 @@ graviteeManagementModule.directive('ngOrgSettingsNewUser', downgradeComponent({ 
 graviteeManagementModule.service('RouterService', RouterService);
 
 graviteeManagementModule.component('messages', MessagesComponent);
+graviteeManagementModule.directive('ngApiMessages', downgradeComponent({ component: ApiMessagesComponent }));
 
 // Dictionaries
 graviteeManagementModule.service('DictionaryService', DictionaryService);
