@@ -103,6 +103,7 @@ public class SyncService extends AbstractService {
                 router.get(PATH).produces(MediaType.APPLICATION_JSON).handler(syncHandler);
 
                 // Start tasks
+                long serviceStartTime = System.currentTimeMillis();
                 apiKeysCacheService.start();
                 subscriptionsCacheService.start();
 
@@ -120,8 +121,8 @@ public class SyncService extends AbstractService {
 
                 // Initial sync has been made, start schedulers.
                 syncManager.startScheduler(delay, unit);
-                apiKeysCacheService.startScheduler(delay, unit);
-                subscriptionsCacheService.startScheduler(delay, unit);
+                apiKeysCacheService.startScheduler(delay, unit, serviceStartTime);
+                subscriptionsCacheService.startScheduler(delay, unit, serviceStartTime);
             } else {
                 logger.warn("Sync service is disabled");
             }

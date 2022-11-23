@@ -130,14 +130,18 @@ public class SubscriptionsCacheService extends AbstractService implements EventL
         router.get(PATH).produces(MediaType.APPLICATION_JSON).handler(subscriptionsServiceHandler);
     }
 
-    public void startScheduler(int delay, TimeUnit unit) {
-        scheduledFuture = scheduler.scheduleAtFixedRate(new SubscriptionsTask(), Duration.ofMillis(unit.toMillis(delay)));
+    public void startScheduler(int delay, TimeUnit unit, long serviceStartTime) {
+        scheduledFuture = scheduler.scheduleAtFixedRate(new SubscriptionsTask(serviceStartTime), Duration.ofMillis(unit.toMillis(delay)));
         eventManager.subscribeForEvents(this, ReactorEvent.class);
     }
 
     class SubscriptionsTask extends TimerTask {
 
-        private long lastRefreshAt = -1;
+        private long lastRefreshAt;
+
+        public SubscriptionsTask(long lastRefreshAt) {
+            this.lastRefreshAt = lastRefreshAt;
+        }
 
         @Override
         public void run() {

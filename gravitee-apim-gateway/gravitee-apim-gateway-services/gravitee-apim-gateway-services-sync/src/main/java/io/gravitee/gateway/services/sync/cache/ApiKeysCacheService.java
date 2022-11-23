@@ -134,14 +134,18 @@ public class ApiKeysCacheService extends AbstractService implements EventListene
         router.get(PATH).produces(MediaType.APPLICATION_JSON).handler(apiKeysHandler);
     }
 
-    public void startScheduler(int delay, TimeUnit unit) {
-        scheduledFuture = scheduler.scheduleAtFixedRate(new ApiKeysTask(), Duration.ofMillis(unit.toMillis(delay)));
+    public void startScheduler(int delay, TimeUnit unit, long serviceStartTime) {
+        scheduledFuture = scheduler.scheduleAtFixedRate(new ApiKeysTask(serviceStartTime), Duration.ofMillis(unit.toMillis(delay)));
         eventManager.subscribeForEvents(this, ReactorEvent.class);
     }
 
     class ApiKeysTask extends TimerTask {
 
-        private long lastRefreshAt = -1;
+        private long lastRefreshAt;
+
+        public ApiKeysTask(long lastRefreshAt) {
+            this.lastRefreshAt = lastRefreshAt;
+        }
 
         @Override
         public void run() {
