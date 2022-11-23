@@ -15,13 +15,9 @@
  */
 package io.gravitee.gateway.services.sync.cache.task;
 
-import static io.gravitee.repository.management.model.Subscription.Status.*;
-
-import io.gravitee.node.api.cache.Cache;
+import io.gravitee.gateway.services.sync.cache.SubscriptionsCache;
 import io.gravitee.repository.management.api.SubscriptionRepository;
 import io.gravitee.repository.management.api.search.SubscriptionCriteria;
-import io.gravitee.repository.management.model.Subscription;
-import java.util.Map;
 import java.util.concurrent.Callable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,63 +32,16 @@ public abstract class SubscriptionRefresher implements Callable<Result<Boolean>>
 
     private SubscriptionRepository subscriptionRepository;
 
-    private Cache<String, Object> cache;
+    private SubscriptionsCache cache;
 
     protected Result<Boolean> doRefresh(SubscriptionCriteria criteria) {
         logger.debug("Refresh api-keys");
 
         try {
-            subscriptionRepository.search(criteria).forEach(this::saveOrUpdate);
-
+            subscriptionRepository.search(criteria).forEach(cache::save);
             return Result.success(true);
         } catch (Exception ex) {
             return Result.failure(ex);
-        }
-    }
-
-    private void saveOrUpdate(Subscription subscription) {
-        String key = String.format("%s.%s.%s", subscription.getApi(), subscription.getClientId(), subscription.getPlan());
-
-        Object element = cache.get(subscription.getId());
-
-        if ((CLOSED.equals(subscription.getStatus()) || PAUSED.equals(subscription.getStatus())) && element != null) {
-            cache.evict(subscription.getId());
-            String oldKey = (String) element;
-            Subscription eltSubscription = (Subscription) cache.get(oldKey);
-            if (eltSubscription != null && eltSubscription.getId().equals(subscription.getId())) {
-                cache.evict(oldKey);
-
-                final String keyWithoutPlan = String.format("%s.%s.%s", eltSubscription.getApi(), eltSubscription.getClientId(), null);
-                cache.evict(keyWithoutPlan);
-            }
-        } else if (ACCEPTED.equals(subscription.getStatus())) {
-            logger.debug(
-                "Cache a subscription: plan[{}] application[{}] client_id[{}]",
-                subscription.getPlan(),
-                subscription.getApplication(),
-                subscription.getClientId()
-            );
-            cache.put(subscription.getId(), key);
-
-            // Delete useless information to preserve memory
-            subscription.setGeneralConditionsContentPageId(null);
-            subscription.setRequest(null);
-            subscription.setReason(null);
-            subscription.setSubscribedBy(null);
-            subscription.setProcessedBy(null);
-
-            cache.put(key, subscription);
-
-            // Index the subscription without plan id to allow search without plan criteria.
-            final String keyWithoutPlan = String.format("%s.%s.%s", subscription.getApi(), subscription.getClientId(), null);
-            cache.put(keyWithoutPlan, subscription);
-
-            if (element != null) {
-                final String oldKey = (String) element;
-                if (!oldKey.equals(key)) {
-                    cache.evict(oldKey);
-                }
-            }
         }
     }
 
@@ -100,7 +49,7 @@ public abstract class SubscriptionRefresher implements Callable<Result<Boolean>>
         this.subscriptionRepository = subscriptionRepository;
     }
 
-    public void setCache(Cache<String, Object> cache) {
+    public void setCache(SubscriptionsCache cache) {
         this.cache = cache;
     }
 }

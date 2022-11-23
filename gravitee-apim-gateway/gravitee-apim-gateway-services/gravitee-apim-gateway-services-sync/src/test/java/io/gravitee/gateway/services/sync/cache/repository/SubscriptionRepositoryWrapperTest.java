@@ -17,6 +17,7 @@ package io.gravitee.gateway.services.sync.cache.repository;
 
 import static org.mockito.Mockito.*;
 
+import io.gravitee.gateway.services.sync.cache.SubscriptionsCache;
 import io.gravitee.node.api.cache.Cache;
 import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.management.api.SubscriptionRepository;
@@ -42,7 +43,7 @@ public class SubscriptionRepositoryWrapperTest {
     private SubscriptionRepository wrappedRepository;
 
     @Mock
-    private Cache<String, Subscription> cache;
+    private SubscriptionsCache cache;
 
     @Mock
     private SubscriptionCriteria subscriptionCriteria;
@@ -68,7 +69,7 @@ public class SubscriptionRepositoryWrapperTest {
 
         repository.search(subscriptionCriteria);
 
-        verify(cache).get("myApi.myClientId.myPlan");
+        verify(cache).get("myApi", "myClientId", "myPlan");
         verifyNoInteractions(wrappedRepository);
     }
 }

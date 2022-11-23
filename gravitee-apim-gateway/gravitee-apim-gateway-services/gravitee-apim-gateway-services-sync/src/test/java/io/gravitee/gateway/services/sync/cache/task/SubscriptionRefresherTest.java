@@ -19,14 +19,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.*;
 
-import io.gravitee.node.api.cache.Cache;
+import io.gravitee.gateway.services.sync.cache.SubscriptionsCache;
 import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.management.api.SubscriptionRepository;
 import io.gravitee.repository.management.api.search.SubscriptionCriteria;
 import io.gravitee.repository.management.model.Subscription;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -45,7 +44,7 @@ public class SubscriptionRefresherTest {
     private SubscriptionRepository subscriptionRepository;
 
     @Mock
-    private Cache<String, Object> cache;
+    private SubscriptionsCache cache;
 
     @Before
     public void setup() {
@@ -68,10 +67,10 @@ public class SubscriptionRefresherTest {
         subscriptionRefresher.doRefresh(subscriptionCriteria);
 
         ArgumentCaptor<String> subscriptionKeyCaptor = ArgumentCaptor.forClass(String.class);
-        ArgumentCaptor<Object> subscriptionCaptor = ArgumentCaptor.forClass(Object.class);
+        ArgumentCaptor<Subscription> subscriptionCaptor = ArgumentCaptor.forClass(Subscription.class);
 
         // all subscriptions have been saved in cache
-        verify(cache, times(9)).put(subscriptionKeyCaptor.capture(), subscriptionCaptor.capture());
+        verify(cache, times(9)).save(subscriptionCaptor.capture());
 
         final List<String> keys = subscriptionKeyCaptor.getAllValues();
 
@@ -85,7 +84,7 @@ public class SubscriptionRefresherTest {
         assertEquals("apisub-3.clientIdsub-3.plansub-3", keys.get(7));
         assertEquals("apisub-3.clientIdsub-3.null", keys.get(8));
 
-        final List<Object> subscriptionsPutInCache = subscriptionCaptor.getAllValues();
+        final List<Subscription> subscriptionsPutInCache = subscriptionCaptor.getAllValues();
         assertEquals("apisub-1.clientIdsub-1.plansub-1", subscriptionsPutInCache.get(0));
         verifySubscription("sub-1", (Subscription) subscriptionsPutInCache.get(1));
         verifySubscription("sub-1", (Subscription) subscriptionsPutInCache.get(2));
@@ -95,31 +94,6 @@ public class SubscriptionRefresherTest {
         assertEquals("apisub-3.clientIdsub-3.plansub-3", subscriptionsPutInCache.get(6));
         verifySubscription("sub-3", (Subscription) subscriptionsPutInCache.get(7));
         verifySubscription("sub-3", (Subscription) subscriptionsPutInCache.get(8));
-    }
-
-    @Test
-    public void doRefresh_should_evict_from_cache_when_subscription_closed_or_paused() throws TechnicalException {
-        final Subscription subscriptionClosed = buildTestSubscription("sub-1");
-        final Subscription subscriptionPaused = buildTestSubscription("sub-2");
-
-        subscriptionClosed.setStatus(Subscription.Status.CLOSED);
-        subscriptionPaused.setStatus(Subscription.Status.PAUSED);
-
-        when(cache.get("sub-1")).thenReturn("apisub-1.clientIdsub-1.plansub-1");
-        when(cache.get("apisub-1.clientIdsub-1.plansub-1")).thenReturn(subscriptionClosed);
-        when(cache.get("sub-2")).thenReturn("apisub-2.clientIdsub-2.plansub-2");
-        when(cache.get("apisub-2.clientIdsub-2.plansub-2")).thenReturn(subscriptionPaused);
-
-        when(subscriptionRepository.search(any())).thenReturn(List.of(subscriptionClosed, subscriptionPaused));
-
-        subscriptionRefresher.doRefresh(mock(SubscriptionCriteria.class));
-
-        verify(cache).evict("sub-1");
-        verify(cache).evict("apisub-1.clientIdsub-1.plansub-1");
-        verify(cache).evict("apisub-1.clientIdsub-1.null");
-        verify(cache).evict("sub-2");
-        verify(cache).evict("apisub-2.clientIdsub-2.plansub-2");
-        verify(cache).evict("apisub-2.clientIdsub-2.null");
     }
 
     private Subscription buildTestSubscription(String id) {

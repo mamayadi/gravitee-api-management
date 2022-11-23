@@ -29,6 +29,7 @@ import io.gravitee.gateway.services.sync.cache.repository.SubscriptionRepository
 import io.gravitee.gateway.services.sync.cache.task.FullSubscriptionRefresher;
 import io.gravitee.gateway.services.sync.cache.task.IncrementalSubscriptionRefresher;
 import io.gravitee.gateway.services.sync.cache.task.Result;
+import io.gravitee.node.api.cache.Cache;
 import io.gravitee.node.api.cache.CacheManager;
 import io.gravitee.node.api.cluster.ClusterManager;
 import io.gravitee.repository.management.api.SubscriptionRepository;
@@ -63,6 +64,9 @@ public class SubscriptionsCacheService extends AbstractService implements EventL
 
     @Value("${services.sync.distributed:false}")
     private boolean distributed;
+
+    @Value("${services.sync.lazy:false}")
+    private boolean lazy;
 
     private static final String PATH = "/subscriptions";
 
@@ -118,7 +122,7 @@ public class SubscriptionsCacheService extends AbstractService implements EventL
         LOGGER.debug("Register subscription repository implementation {}", SubscriptionRepositoryWrapper.class.getName());
         beanFactory.registerSingleton(
             SubscriptionRepository.class.getName(),
-            new SubscriptionRepositoryWrapper(subscriptionRepository, cacheManager.getOrCreateCache(CACHE_NAME))
+            new SubscriptionRepositoryWrapper(subscriptionRepository, buildSubscriptionsCache())
         );
 
         LOGGER.info("Associate a new HTTP handler on {}", PATH);
@@ -173,7 +177,7 @@ public class SubscriptionsCacheService extends AbstractService implements EventL
                                         chunks
                                     );
                                     refresher.setSubscriptionRepository(subscriptionRepository);
-                                    refresher.setCache(cacheManager.getOrCreateCache(CACHE_NAME));
+                                    refresher.setCache(buildSubscriptionsCache());
 
                                     return refresher;
                                 }
@@ -290,10 +294,10 @@ public class SubscriptionsCacheService extends AbstractService implements EventL
             final Set<String> planIds = plansByApi.values().stream().flatMap(Collection::stream).collect(Collectors.toSet());
 
             // If the node is not a master, we assume that the full refresh has been handle by an other node
-            if (clusterManager.isMasterNode() || (!clusterManager.isMasterNode() && !distributed)) {
+            if (!lazy && (clusterManager.isMasterNode() || (!clusterManager.isMasterNode() && !distributed))) {
                 final FullSubscriptionRefresher refresher = new FullSubscriptionRefresher(planIds);
                 refresher.setSubscriptionRepository(subscriptionRepository);
-                refresher.setCache(cacheManager.getOrCreateCache(CACHE_NAME));
+                refresher.setCache(buildSubscriptionsCache());
 
                 CompletableFuture
                     .supplyAsync(refresher::call, executorService)
@@ -329,5 +333,12 @@ public class SubscriptionsCacheService extends AbstractService implements EventL
 
     private void unregister(Api api) {
         plansPerApi.remove(api.getId());
+    }
+
+    private SubscriptionsCache buildSubscriptionsCache() {
+        Cache subscriptionsCache = cacheManager.getOrCreateCache(CACHE_NAME);
+        return lazy
+            ? new SubscriptionsFetchingCache(subscriptionsCache, subscriptionRepository)
+            : new SubscriptionsCache(subscriptionsCache);
     }
 }

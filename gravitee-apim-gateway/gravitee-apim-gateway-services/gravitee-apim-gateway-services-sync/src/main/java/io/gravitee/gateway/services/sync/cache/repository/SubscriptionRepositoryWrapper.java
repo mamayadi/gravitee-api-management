@@ -16,7 +16,7 @@
 package io.gravitee.gateway.services.sync.cache.repository;
 
 import io.gravitee.common.data.domain.Page;
-import io.gravitee.node.api.cache.Cache;
+import io.gravitee.gateway.services.sync.cache.SubscriptionsCache;
 import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.management.api.SubscriptionRepository;
 import io.gravitee.repository.management.api.search.Order;
@@ -32,9 +32,9 @@ import java.util.*;
 public class SubscriptionRepositoryWrapper implements SubscriptionRepository {
 
     private final SubscriptionRepository wrapped;
-    private final Cache<String, Subscription> cache;
+    private final SubscriptionsCache cache;
 
-    public SubscriptionRepositoryWrapper(final SubscriptionRepository wrapped, final Cache<String, Subscription> cache) {
+    public SubscriptionRepositoryWrapper(final SubscriptionRepository wrapped, final SubscriptionsCache cache) {
         this.wrapped = wrapped;
         this.cache = cache;
     }
@@ -70,16 +70,12 @@ public class SubscriptionRepositoryWrapper implements SubscriptionRepository {
         // If clientId is included, the search is done by the gateway to check a subscription from the cache.
         if (criteria.getClientId() == null) {
             return this.wrapped.search(criteria);
-        } else {
-            final String api = criteria.getApis() != null && !criteria.getApis().isEmpty() ? criteria.getApis().iterator().next() : null;
-            final String plan = criteria.getPlans() != null && !criteria.getPlans().isEmpty()
-                ? criteria.getPlans().iterator().next()
-                : null;
-
-            final String key = String.format("%s.%s.%s", api, criteria.getClientId(), plan);
-            final Subscription subscription = this.cache.get(key);
-            return (subscription != null) ? Collections.singletonList(subscription) : null;
         }
+
+        final String api = criteria.getApis() != null && !criteria.getApis().isEmpty() ? criteria.getApis().iterator().next() : null;
+        final String plan = criteria.getPlans() != null && !criteria.getPlans().isEmpty() ? criteria.getPlans().iterator().next() : null;
+
+        return cache.get(api, criteria.getClientId(), plan).map(Collections::singletonList).orElse(null);
     }
 
     @Override
