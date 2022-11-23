@@ -103,7 +103,7 @@ public class ApiKeyRepositoryWrapperTest {
         String apiId = "my-Api-Id";
         ApiKey mockApiKey = Mockito.mock(ApiKey.class);
 
-        Mockito.when(cache.get("my-Api-Id", "1234-4567-7890")).thenReturn(mockApiKey);
+        Mockito.when(cache.get("my-Api-Id", "1234-4567-7890")).thenReturn(Optional.of(mockApiKey));
         Optional<io.gravitee.repository.management.model.ApiKey> optApiKey = repository.findByKeyAndApi(apiKey, apiId);
 
         Assert.assertNotNull(optApiKey);
