@@ -143,6 +143,19 @@ function apisRouterConfig($stateProvider: StateProvider) {
         },
       },
     })
+    .state('management.apis.create-v4-in-progress', {
+      url: '/new/create/v4/in-progress',
+      component: 'ngApiCreationV4InProgressComponent',
+      data: {
+        useAngularMaterial: true,
+        perms: {
+          only: ['environment-api-c'],
+        },
+      },
+      params: {
+        apiPayload: {},
+      },
+    })
     .state('management.apis.create-v4', {
       url: '/new/create/v4',
       component: 'ngApiCreationV4Component',

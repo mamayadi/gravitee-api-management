@@ -49,6 +49,25 @@ export class ApiCreationV4Step6Component implements OnInit {
     this.currentStepPayload = this.stepService.payload;
   }
 
+  goToLoadingPage() {
+    // TODO: Figure out a way to emit to parent
+    // this.finished.emit(true);
+    const apiCreationPayload = this.stepService.payload;
+
+    // Note : WIP 🚧
+    // Use the fakeNewApiEntity to create a new API temporarily
+    // The real API creation will be done when we complete other api creation steps
+    const api = fakeNewApiEntity((api) => {
+      const listener = api.listeners[0] as HttpListener;
+      listener.paths = [{ path: `/fake/${kebabCase(apiCreationPayload.name + '-' + apiCreationPayload.version)}` }];
+      return {
+        ...api,
+        name: apiCreationPayload.name,
+      };
+    });
+    this.ajsState.go('management.apis.create-v4-in-progress', { apiPayload: api });
+  }
+
   createApi(deploy: boolean) {
     const apiCreationPayload = this.stepService.payload;
 
