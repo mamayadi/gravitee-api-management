@@ -131,7 +131,7 @@
                 <artifactId>maven-assembly-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>package-assembly</id>
+                        <id>make-bundles</id>
                         <phase>package</phase>
                         <goals>
                             <goal>single</goal>
