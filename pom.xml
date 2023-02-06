@@ -1001,6 +1001,7 @@
                 <module>gravitee-apim-rest-api</module>
                 <module>gravitee-apim-gateway</module>
                 <module>gravitee-apim-plugin</module>
+                <module>gravitee-cloud-functions</module>
             </modules>
         </profile>
         <profile>
@@ -1014,7 +1015,8 @@
             <modules>
                 <module>gravitee-apim-definition</module>
                 <module>gravitee-apim-rest-api</module>
-                <module>gravitee-apim-gateway</module>
+                <module>gravitee-apim-rest-api</module>
+                <module>gravitee-cloud-functions</module>
             </modules>
         </profile>
         <profile>

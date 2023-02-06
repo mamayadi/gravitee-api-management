@@ -1,0 +1,8 @@
+POST http://localhost:7071/api/HttpExample
+Content-Type: application/json
+
+{
+  "message": "Hello Gravitee Labs"
+}
+
+###
