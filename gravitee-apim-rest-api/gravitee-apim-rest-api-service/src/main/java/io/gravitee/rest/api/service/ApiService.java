@@ -153,7 +153,5 @@ public interface ApiService {
 
     void checkPolicyConfigurations(Map<String, List<Rule>> paths, List<Flow> flows, Set<PlanEntity> plans);
 
-    Map<String, Long> countPublishedByUserGroupedByCategories(String userId);
-
     Map<String, Object> findByIdAsMap(String api) throws TechnicalException;
 }

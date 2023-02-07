@@ -198,6 +198,7 @@ import io.gravitee.rest.api.service.search.query.QueryBuilder;
 import io.gravitee.rest.api.service.v4.ApiAuthorizationService;
 import io.gravitee.rest.api.service.v4.ApiEntrypointService;
 import io.gravitee.rest.api.service.v4.ApiNotificationService;
+import io.gravitee.rest.api.service.v4.ApiSearchService;
 import io.gravitee.rest.api.service.v4.ApiTemplateService;
 import io.gravitee.rest.api.service.v4.PrimaryOwnerService;
 import io.gravitee.rest.api.service.v4.validation.AnalyticsValidationService;
@@ -400,6 +401,10 @@ public class ApiServiceImpl extends AbstractService implements ApiService {
 
     @Autowired
     private TagsValidationService tagsValidationService;
+
+    @Lazy
+    @Autowired
+    private ApiSearchService apiSearchService;
 
     @Override
     public ApiEntity createFromSwagger(
@@ -2036,20 +2041,12 @@ public class ApiServiceImpl extends AbstractService implements ApiService {
 
     @Override
     public Collection<ApiEntity> search(ExecutionContext executionContext, final ApiQuery query) {
-        LOGGER.debug("Search APIs by {}", query);
-
-        Optional<Collection<String>> optionalTargetIds = this.searchInDefinition(executionContext, query);
-
-        if (optionalTargetIds.isPresent()) {
-            Collection<String> targetIds = optionalTargetIds.get();
-            if (targetIds.isEmpty()) {
-                return Collections.emptySet();
-            }
-            query.setIds(targetIds);
-        }
-
-        List<Api> apis = apiRepository.search(queryToCriteria(executionContext, query).build(), ApiFieldFilter.allFields());
-        return this.convert(executionContext, apis);
+        return apiSearchService
+            .search(executionContext, query, true)
+            .stream()
+            .filter(ApiEntity.class::isInstance)
+            .map(c -> (ApiEntity) c)
+            .collect(toList());
     }
 
     @Override
@@ -2075,7 +2072,7 @@ public class ApiServiceImpl extends AbstractService implements ApiService {
         try {
             LOGGER.debug("Search paged APIs by {}", query);
 
-            Collection<String> apiIds = this.searchIds(executionContext, query, filters, sortable);
+            Collection<String> apiIds = apiSearchService.searchIds(executionContext, query, filters, sortable, true);
 
             if (apiIds.isEmpty()) {
                 return new Page<>(emptyList(), 0, 0, 0);
@@ -2153,7 +2150,7 @@ public class ApiServiceImpl extends AbstractService implements ApiService {
 
     @Override
     public Collection<String> searchIds(ExecutionContext executionContext, String query, Map<String, Object> filters, Sortable sortable) {
-        return this.searchInDefinition(executionContext, query, filters, sortable).getDocuments();
+        return apiSearchService.searchIds(executionContext, query, filters, sortable, true);
     }
 
     @Override
@@ -2657,69 +2654,6 @@ public class ApiServiceImpl extends AbstractService implements ApiService {
                 }
             }
         }
-    }
-
-    @Override
-    public Map<String, Long> countPublishedByUserGroupedByCategories(String userId) {
-        List<ApiCriteria> criteriaList = new ArrayList<>();
-        // Find all Public and published APIs
-        criteriaList.add(getDefaultApiCriteriaBuilder().visibility(PUBLIC).lifecycleStates(List.of(ApiLifecycleState.PUBLISHED)).build());
-
-        // if user is not anonymous
-        if (userId != null) {
-            // Find all Published APIs for which the user is a member
-            List<String> userMembershipApiIds = getUserMembershipApiIds(userId);
-            if (!userMembershipApiIds.isEmpty()) {
-                criteriaList.add(
-                    getDefaultApiCriteriaBuilder().lifecycleStates(List.of(ApiLifecycleState.PUBLISHED)).ids(userMembershipApiIds).build()
-                );
-            }
-
-            // Find all Published APIs for which the user is a member of a group
-            List<String> userGroupIdsWithApiRole = getUserGroupIdsWithApiRole(userId);
-            if (!userGroupIdsWithApiRole.isEmpty()) {
-                criteriaList.add(
-                    getDefaultApiCriteriaBuilder()
-                        .lifecycleStates(List.of(ApiLifecycleState.PUBLISHED))
-                        .groups(userGroupIdsWithApiRole)
-                        .build()
-                );
-            }
-        }
-
-        Page<String> foundApiIds = apiRepository.searchIds(criteriaList, new PageableBuilder().pageSize(Integer.MAX_VALUE).build(), null);
-
-        if (foundApiIds.getContent() == null || foundApiIds.getContent().isEmpty()) {
-            return Collections.emptyMap();
-        }
-
-        return apiRepository
-            .search(getDefaultApiCriteriaBuilder().ids(foundApiIds.getContent()).build(), null, ApiFieldFilter.defaultFields())
-            .filter(api -> api.getCategories() != null && !api.getCategories().isEmpty())
-            .flatMap(api -> api.getCategories().stream().map(cat -> Pair.of(cat, api)))
-            .collect(groupingBy(Pair::getKey, HashMap::new, counting()));
-    }
-
-    private List<String> getUserGroupIdsWithApiRole(String userId) {
-        return membershipService
-            .getMembershipsByMemberAndReference(MembershipMemberType.USER, userId, MembershipReferenceType.GROUP)
-            .stream()
-            .filter(
-                m -> {
-                    final RoleEntity roleInGroup = roleService.findById(m.getRoleId());
-                    return m.getRoleId() != null && roleInGroup.getScope().equals(RoleScope.API);
-                }
-            )
-            .map(MembershipEntity::getReferenceId)
-            .collect(toList());
-    }
-
-    private List<String> getUserMembershipApiIds(String userId) {
-        return membershipService
-            .getMembershipsByMemberAndReference(MembershipMemberType.USER, userId, MembershipReferenceType.API)
-            .stream()
-            .map(MembershipEntity::getReferenceId)
-            .collect(toList());
     }
 
     @NotNull
