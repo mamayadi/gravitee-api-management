@@ -164,7 +164,8 @@ public class ApiSearchServiceImplTest {
                 apiMapper,
                 new GenericApiMapper(apiMapper, apiConverter),
                 primaryOwnerService,
-                categoryService
+                categoryService,
+                searchEngineService
             );
 
         reset(searchEngineService);
