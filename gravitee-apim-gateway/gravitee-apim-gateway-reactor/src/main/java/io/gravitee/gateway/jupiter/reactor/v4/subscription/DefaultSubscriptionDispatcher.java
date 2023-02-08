@@ -19,10 +19,12 @@ import static io.gravitee.gateway.jupiter.api.context.InternalContextAttributes.
 import static io.gravitee.gateway.jupiter.api.context.InternalContextAttributes.ATTR_INTERNAL_SECURITY_SKIP;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.gravitee.common.service.AbstractService;
 import io.gravitee.common.utils.RxHelper;
 import io.gravitee.gateway.api.service.Subscription;
+import io.gravitee.gateway.api.service.SubscriptionConfiguration;
 import io.gravitee.gateway.jupiter.api.ExecutionPhase;
 import io.gravitee.gateway.jupiter.api.ListenerType;
 import io.gravitee.gateway.jupiter.api.context.ContextAttributes;
@@ -67,6 +69,7 @@ public class DefaultSubscriptionDispatcher extends AbstractService<SubscriptionD
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultSubscriptionDispatcher.class);
     private static final String SUBSCRIPTION_ENTRYPOINT_FIELD = "entrypointId";
+    private static final String SUBSCRIPTION_CHANNEL_FIELD = "channel";
 
     protected static final String TRACING_SPAN_NAME = "SUBSCRIPTION";
     protected static final String ATTR_INTERNAL_TRACING_SPAN = "subscription-tracing-span";
@@ -75,7 +78,6 @@ public class DefaultSubscriptionDispatcher extends AbstractService<SubscriptionD
     private final Map<String, Disposable> activeDisposables = new ConcurrentHashMap<>();
 
     private final SubscriptionAcceptorResolver subscriptionAcceptorResolver;
-    private final ObjectMapper mapper = new ObjectMapper();
     private final SubscriptionExecutionContextFactory subscriptionExecutionContextFactory;
     private final SubscriptionPlatformProcessorChainFactory platformProcessorChainFactory;
     private final Vertx vertx;
@@ -99,41 +101,39 @@ public class DefaultSubscriptionDispatcher extends AbstractService<SubscriptionD
 
     @Override
     public Completable dispatch(Subscription subscriptionToDispatch) {
-        return Completable.create(
-            emitter -> {
-                if (
-                    statusIsAccepted(subscriptionToDispatch) &&
-                    consumerStatusIsActive(subscriptionToDispatch) &&
-                    !isExpired(subscriptionToDispatch)
-                ) {
-                    try {
-                        activeSubscriptions.compute(
-                            subscriptionToDispatch.getId(),
-                            (subscriptionId, activeSubscription) -> {
-                                // activate subscription if not yet active
-                                if (activeSubscription == null) {
-                                    return activateSubscription(subscriptionToDispatch, emitter);
-                                }
-                                // if subscription already active modified, update it
-                                else if (!subscriptionToDispatch.equals(activeSubscription) || subscriptionToDispatch.isForceDispatch()) {
-                                    return updateSubscription(subscriptionToDispatch, emitter);
-                                }
-                                // otherwise, keep active subscription as it is
-                                emitter.onComplete();
-                                return activeSubscription;
+        return Completable.create(emitter -> {
+            if (
+                statusIsAccepted(subscriptionToDispatch) &&
+                consumerStatusIsActive(subscriptionToDispatch) &&
+                !isExpired(subscriptionToDispatch)
+            ) {
+                try {
+                    activeSubscriptions.compute(
+                        subscriptionToDispatch.getId(),
+                        (subscriptionId, activeSubscription) -> {
+                            // activate subscription if not yet active
+                            if (activeSubscription == null) {
+                                return activateSubscription(subscriptionToDispatch, emitter);
                             }
-                        );
-                    } catch (SubscriptionNotDispatchedException e) {
-                        emitter.onError(e);
-                    }
-                }
-                // dispose subscription if it's not accepted, or already expired
-                else {
-                    disposeSubscription(subscriptionToDispatch.getId());
-                    emitter.onComplete();
+                            // if subscription already active modified, update it
+                            else if (!subscriptionToDispatch.equals(activeSubscription) || subscriptionToDispatch.isForceDispatch()) {
+                                return updateSubscription(subscriptionToDispatch, emitter);
+                            }
+                            // otherwise, keep active subscription as it is
+                            emitter.onComplete();
+                            return activeSubscription;
+                        }
+                    );
+                } catch (SubscriptionNotDispatchedException e) {
+                    emitter.onError(e);
                 }
             }
-        );
+            // dispose subscription if it's not accepted, or already expired
+            else {
+                disposeSubscription(subscriptionToDispatch.getId());
+                emitter.onComplete();
+            }
+        });
     }
 
     private static boolean statusIsAccepted(Subscription subscriptionToDispatch) {
@@ -150,27 +150,26 @@ public class DefaultSubscriptionDispatcher extends AbstractService<SubscriptionD
         if (subscriptionAcceptor != null && subscriptionAcceptor.reactor() != null) {
             ApiReactor apiReactor = (ApiReactor) subscriptionAcceptor.reactor();
 
-            String configuration = subscription.getConfiguration();
             try {
                 // Extract the type from the configuration
-                String type = mapper.readTree(configuration).path(SUBSCRIPTION_ENTRYPOINT_FIELD).asText();
-                if (type == null || type.trim().isEmpty()) {
+                SubscriptionConfiguration subscriptionConfiguration = subscription.getConfiguration();
+                if (
+                    subscriptionConfiguration == null ||
+                    subscriptionConfiguration.getEntrypointId() == null ||
+                    subscriptionConfiguration.getEntrypointId().trim().isEmpty()
+                ) {
                     LOGGER.error("Unable to handle subscription without known entrypoint id");
                 } else {
-                    Completable subscriptionObs = handleSubscription(subscription, apiReactor, type)
-                        .onErrorComplete(
-                            throwable -> {
-                                emitter.onError(throwable);
-                                return true;
-                            }
-                        )
+                    Completable subscriptionObs = handleSubscription(subscription, apiReactor)
+                        .onErrorComplete(throwable -> {
+                            emitter.onError(throwable);
+                            return true;
+                        })
                         .doOnSubscribe(disposable -> LOGGER.debug("Subscription [{}] activated", subscription.getId()))
-                        .doOnComplete(
-                            () -> {
-                                activeDisposables.remove(subscription.getId());
-                                emitter.onComplete();
-                            }
-                        );
+                        .doOnComplete(() -> {
+                            activeDisposables.remove(subscription.getId());
+                            emitter.onComplete();
+                        });
 
                     activeDisposables.put(subscription.getId(), subscriptionObs.subscribe());
 
@@ -183,34 +182,43 @@ public class DefaultSubscriptionDispatcher extends AbstractService<SubscriptionD
         throw new SubscriptionNotDispatchedException(String.format("No acceptor available for subscription [%s]", subscription.getId()));
     }
 
-    private Completable handleSubscription(Subscription subscription, ApiReactor apiReactor, String type) {
+    private Completable handleSubscription(final Subscription subscription, final ApiReactor apiReactor) {
         return Completable
-            .defer(
-                () -> {
-                    MutableExecutionContext context = subscriptionExecutionContextFactory.create(subscription);
-
-                    // This attribute is used by connectors
-                    context.setInternalAttribute(InternalContextAttributes.ATTR_INTERNAL_REACTABLE_API, apiReactor.api());
-                    context.setInternalAttribute(InternalContextAttributes.ATTR_INTERNAL_SUBSCRIPTION_TYPE, type);
-                    context.setInternalAttribute(InternalContextAttributes.ATTR_INTERNAL_SUBSCRIPTION, subscription);
-                    context.setAttribute(ContextAttributes.ATTR_PLAN, subscription.getPlan());
-                    context.setAttribute(ContextAttributes.ATTR_APPLICATION, subscription.getApplication());
-                    context.setAttribute(ContextAttributes.ATTR_SUBSCRIPTION_ID, subscription.getId());
-
-                    // Skip the security chain (currently requires to be an attribute as long as we support v3).
-                    context.setInternalAttribute(ATTR_INTERNAL_SECURITY_SKIP, true);
-
-                    context.setInternalAttribute(ATTR_INTERNAL_LISTENER_TYPE, ListenerType.SUBSCRIPTION);
-                    return executeSubscriptionChain(apiReactor, context)
-                        // Apply a delay before starting the subscription if it has a starting date
-                        .compose(delayToStartDate(subscription))
-                        // Apply a timeout to the subscription if it has an ending date
-                        .compose(timeoutAtEndingDate(subscription))
-                        .compose(verifyHttpResponseError(subscription, context))
-                        // Manage functional errors, for example when a subscription expires
-                        .onErrorComplete(shouldCompleteOnError());
+            .defer(() -> {
+                MutableExecutionContext context = subscriptionExecutionContextFactory.create(subscription);
+                SubscriptionConfiguration subscriptionConfiguration = subscription.getConfiguration();
+                String channelSubscribed = subscriptionConfiguration.getChannel();
+                if (channelSubscribed != null) {
+                    if (!channelSubscribed.startsWith("/")) {
+                        channelSubscribed = "/" + channelSubscribed;
+                    }
+                    context.request().pathInfo(channelSubscribed);
                 }
-            )
+
+                // This attribute is used by connectors
+                context.setInternalAttribute(InternalContextAttributes.ATTR_INTERNAL_REACTABLE_API, apiReactor.api());
+                context.setInternalAttribute(
+                    InternalContextAttributes.ATTR_INTERNAL_SUBSCRIPTION_TYPE,
+                    subscriptionConfiguration.getEntrypointId()
+                );
+                context.setInternalAttribute(InternalContextAttributes.ATTR_INTERNAL_SUBSCRIPTION, subscription);
+                context.setAttribute(ContextAttributes.ATTR_PLAN, subscription.getPlan());
+                context.setAttribute(ContextAttributes.ATTR_APPLICATION, subscription.getApplication());
+                context.setAttribute(ContextAttributes.ATTR_SUBSCRIPTION_ID, subscription.getId());
+
+                // Skip the security chain (currently requires to be an attribute as long as we support v3).
+                context.setInternalAttribute(ATTR_INTERNAL_SECURITY_SKIP, true);
+
+                context.setInternalAttribute(ATTR_INTERNAL_LISTENER_TYPE, ListenerType.SUBSCRIPTION);
+                return executeSubscriptionChain(apiReactor, context)
+                    // Apply a delay before starting the subscription if it has a starting date
+                    .compose(delayToStartDate(subscription))
+                    // Apply a timeout to the subscription if it has an ending date
+                    .compose(timeoutAtEndingDate(subscription))
+                    .compose(verifyHttpResponseError(subscription, context))
+                    // Manage functional errors, for example when a subscription expires
+                    .onErrorComplete(shouldCompleteOnError());
+            })
             .compose(
                 RxHelper.retry(
                     ON_SUBSCRIPTION_ERROR_RETRY_COUNT,
@@ -231,11 +239,8 @@ public class DefaultSubscriptionDispatcher extends AbstractService<SubscriptionD
             .andThen(Completable.defer(() -> reactorHandler.handle(ctx)))
             // execute post processors
             // we have to run it on the same vertx context as subscriber's, cause tracing mechanism is relying on vertx context
-            .doFinally(
-                () ->
-                    vertxContext.runOnContext(
-                        v -> executePostProcessorChain(ctx).andThen(endTracingSpan(ctx)).onErrorComplete().subscribe()
-                    )
+            .doFinally(() ->
+                vertxContext.runOnContext(v -> executePostProcessorChain(ctx).andThen(endTracingSpan(ctx)).onErrorComplete().subscribe())
             );
     }
 
@@ -264,31 +269,27 @@ public class DefaultSubscriptionDispatcher extends AbstractService<SubscriptionD
     }
 
     private Completable initTracingSpan(MutableExecutionContext ctx) {
-        return Completable.fromRunnable(
-            () -> {
-                if (tracingEnabled) {
-                    Tracer tracer = ctx.getComponent(Tracer.class);
-                    if (tracer != null) {
-                        Span span = tracer.span(TRACING_SPAN_NAME);
-                        ctx.putInternalAttribute(ATTR_INTERNAL_TRACING_SPAN, span);
-                    }
+        return Completable.fromRunnable(() -> {
+            if (tracingEnabled) {
+                Tracer tracer = ctx.getComponent(Tracer.class);
+                if (tracer != null) {
+                    Span span = tracer.span(TRACING_SPAN_NAME);
+                    ctx.putInternalAttribute(ATTR_INTERNAL_TRACING_SPAN, span);
                 }
             }
-        );
+        });
     }
 
     private Completable endTracingSpan(MutableExecutionContext ctx) {
-        return Completable.fromRunnable(
-            () -> {
-                if (tracingEnabled) {
-                    Span span = ctx.getInternalAttribute(ATTR_INTERNAL_TRACING_SPAN);
-                    if (span != null) {
-                        span.end();
-                        ctx.removeInternalAttribute(ATTR_INTERNAL_TRACING_SPAN);
-                    }
+        return Completable.fromRunnable(() -> {
+            if (tracingEnabled) {
+                Span span = ctx.getInternalAttribute(ATTR_INTERNAL_TRACING_SPAN);
+                if (span != null) {
+                    span.end();
+                    ctx.removeInternalAttribute(ATTR_INTERNAL_TRACING_SPAN);
                 }
             }
-        );
+        });
     }
 
     /**
@@ -336,17 +337,15 @@ public class DefaultSubscriptionDispatcher extends AbstractService<SubscriptionD
     private CompletableTransformer verifyHttpResponseError(Subscription subscription, MutableExecutionContext context) {
         return upstream ->
             upstream.andThen(
-                Completable.defer(
-                    () -> {
-                        if (context.response().isStatus4xx() || context.response().isStatus5xx()) {
-                            return context
-                                .response()
-                                .body()
-                                .flatMapCompletable(buffer -> Completable.error(new SubscriptionConnectionException(buffer.toString())));
-                        }
-                        return Completable.complete();
+                Completable.defer(() -> {
+                    if (context.response().isStatus4xx() || context.response().isStatus5xx()) {
+                        return context
+                            .response()
+                            .body()
+                            .flatMapCompletable(buffer -> Completable.error(new SubscriptionConnectionException(buffer.toString())));
                     }
-                )
+                    return Completable.complete();
+                })
             );
     }
 

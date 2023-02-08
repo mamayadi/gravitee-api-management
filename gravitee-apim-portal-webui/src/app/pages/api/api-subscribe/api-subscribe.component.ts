@@ -20,6 +20,7 @@ import '@gravitee/ui-components/wc/gv-plans';
 import '@gravitee/ui-components/wc/gv-option';
 import '@gravitee/ui-components/wc/gv-code';
 import '@gravitee/ui-components/wc/gv-list';
+import '@gravitee/ui-components/wc/gv-schema-form-group';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
@@ -36,8 +37,10 @@ import {
   ApiService,
   Application,
   ApplicationService,
-  Plan,
+  Entrypoint,
+  EntrypointsService,
   Page,
+  Plan,
   Subscription,
   SubscriptionService,
   SubscriptionsResponse,
@@ -85,6 +88,10 @@ export class ApiSubscribeComponent implements OnInit {
   subscriptionError: string;
 
   private _canSubscribe: boolean;
+  entrypoints: Entrypoint[];
+  entrypointOptions: { label: string; value: string }[];
+  availableEntrypoints: Map<string, Entrypoint>;
+  selectedEntrypointSchema: Record<string, unknown>;
 
   constructor(
     private apiService: ApiService,
@@ -95,6 +102,7 @@ export class ApiSubscribeComponent implements OnInit {
     private subscriptionService: SubscriptionService,
     private formBuilder: FormBuilder,
     private configurationService: ConfigurationService,
+    private entrypointsService: EntrypointsService,
   ) {}
 
   async ngOnInit() {
@@ -108,6 +116,9 @@ export class ApiSubscribeComponent implements OnInit {
     this.connectedApps = [];
 
     this.subscribeForm = this.formBuilder.group({
+      channel: new FormControl(null),
+      entrypoint: new FormControl(null, [Validators.required]),
+      entrypointConfiguration: new FormControl(null),
       application: new FormControl(null, [Validators.required]),
       apiKeyMode: new FormControl(null),
       plan: new FormControl(null, [Validators.required]),
@@ -159,12 +170,28 @@ export class ApiSubscribeComponent implements OnInit {
     Promise.all([
       this.applicationService.getApplications({ size: -1, forSubscription: true }).toPromise(),
       this.apiService.getApiPlansByApiId({ apiId: this.apiId, size: -1 }).toPromise(),
+      this.entrypointsService.getEntrypoints({ expand: ['icon', 'subscriptionSchema'] }).toPromise(),
       this.getSubscriptions(),
     ])
-      .then(([allAppsResponse, apiPlansResponse]) => {
+      .then(([allAppsResponse, apiPlansResponse, entrypointsResponse]) => {
         this.plans = apiPlansResponse.data;
         this._applications = allAppsResponse.data;
+        this.availableEntrypoints = new Map(
+          entrypointsResponse
+            .filter(entrypoint => {
+              return entrypoint.supportedListenerType === Entrypoint.SupportedListenerTypeEnum.Subscription;
+            })
+            .map(entrypoint => [entrypoint.id, entrypoint]),
+        );
 
+        this.entrypointOptions = Array.from(this.availableEntrypoints.values()).map(entrypoint => {
+          return { label: entrypoint.name, value: entrypoint.id };
+        });
+
+        this.subscribeForm.valueChanges.pipe(distinctUntilChanged((prev, curr) => prev.entrypoint === curr.entrypoint)).subscribe(() => {
+          const selectedEntrypoint = this.availableEntrypoints.get(this.subscribeForm.value.entrypoint);
+          this.selectedEntrypointSchema = JSON.parse(selectedEntrypoint?.subscriptionSchema ?? '{}');
+        });
         this.subscribeForm.valueChanges
           .pipe(distinctUntilChanged((prev, curr) => JSON.stringify(prev) === JSON.stringify(curr)))
           .subscribe(() => this.updateSteps());
@@ -238,11 +265,14 @@ export class ApiSubscribeComponent implements OnInit {
   }
 
   private updateSteps() {
+    const isConfigurationValid =
+      !this.isSubscription() ||
+      (this.subscribeForm.get('entrypoint').errors == null && this.subscribeForm.get('entrypointConfiguration').errors == null);
     const isAppValid = this.subscribeForm.get('application').errors == null && this.subscribeForm.get('request').errors == null;
     const isKeyModeValid = this.subscribeForm.get('apiKeyMode').errors == null;
 
     const stepsItems: any[] = [
-      { description: this.getPlanName() },
+      { description: this.getPlanName(), valid: isConfigurationValid },
       { description: this.getApplicationName(), valid: isAppValid },
       { description: this.getCreatedAt(), valid: this._subscription != null },
     ];
@@ -272,6 +302,14 @@ export class ApiSubscribeComponent implements OnInit {
     } else {
       this.currentStep = current;
     }
+  }
+
+  onSubscriptionConfigurationError($event) {
+    // Set error at the end of js task. Otherwise it will be reset on value change
+    setTimeout(() => {
+      this.subscribeForm.get('entrypointConfiguration').setErrors($event.detail ? { error: true } : null);
+      this.updateSteps();
+    }, 0);
   }
 
   getPlanName() {
@@ -413,6 +451,14 @@ export class ApiSubscribeComponent implements OnInit {
     return false;
   }
 
+  isSubscription() {
+    const currentPlan = this.getCurrentPlan();
+    if (currentPlan && currentPlan.security.toUpperCase() === Plan.SecurityEnum.SUBSCRIPTION) {
+      return true;
+    }
+    return false;
+  }
+
   getCommentLabel() {
     const currentPlan = this.getCurrentPlan();
     let label = this._commentLabel;
@@ -458,6 +504,11 @@ export class ApiSubscribeComponent implements OnInit {
               application: this.subscribeForm.value.application,
               plan: this.subscribeForm.value.plan,
               request: this.subscribeForm.value.request,
+              configuration: {
+                channel: this.subscribeForm.value.channel,
+                entrypointId: this.subscribeForm.value.entrypoint,
+                entrypointConfiguration: this.subscribeForm.value.entrypointConfiguration,
+              },
               general_conditions_accepted: this.subscribeForm.value.general_conditions_accepted,
               general_conditions_content_revision: this.subscribeForm.value.general_conditions_content_revision,
             },

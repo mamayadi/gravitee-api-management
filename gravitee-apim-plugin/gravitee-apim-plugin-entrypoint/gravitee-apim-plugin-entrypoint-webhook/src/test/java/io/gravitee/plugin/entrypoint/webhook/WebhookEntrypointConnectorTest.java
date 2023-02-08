@@ -30,6 +30,7 @@ import io.gravitee.definition.model.v4.ssl.SslOptions;
 import io.gravitee.gateway.api.buffer.Buffer;
 import io.gravitee.gateway.api.http.HttpHeaders;
 import io.gravitee.gateway.api.service.Subscription;
+import io.gravitee.gateway.api.service.SubscriptionConfiguration;
 import io.gravitee.gateway.jupiter.api.ApiType;
 import io.gravitee.gateway.jupiter.api.ConnectorMode;
 import io.gravitee.gateway.jupiter.api.ExecutionFailure;
@@ -127,7 +128,9 @@ class WebhookEntrypointConnectorTest {
                 )
             )
             .thenReturn(subscriptionConfiguration);
-        lenient().when(subscription.getConfiguration()).thenReturn(SUBSCRIPTION_CONFIGURATION);
+        lenient()
+            .when(subscription.getConfiguration())
+            .thenReturn(SubscriptionConfiguration.builder().entrypointConfiguration(SUBSCRIPTION_CONFIGURATION).build());
         lenient().when(subscriptionConfiguration.getCallbackUrl()).thenReturn("http://localhost:8080/callback");
 
         cut = new WebhookEntrypointConnector(connectorHelper, Qos.NONE, configuration);
@@ -380,10 +383,9 @@ class WebhookEntrypointConnectorTest {
         chunksObs.assertError(Throwable.class);
         verify(ctx)
             .interruptMessageWith(
-                argThat(
-                    executionFailure ->
-                        executionFailure.statusCode() == HttpStatusCode.INTERNAL_SERVER_ERROR_500 &&
-                        executionFailure.message().equals(MOCK_ERROR)
+                argThat(executionFailure ->
+                    executionFailure.statusCode() == HttpStatusCode.INTERNAL_SERVER_ERROR_500 &&
+                    executionFailure.message().equals(MOCK_ERROR)
                 )
             );
         verify(message, never()).ack();
@@ -427,11 +429,10 @@ class WebhookEntrypointConnectorTest {
 
         verify(ctx)
             .interruptMessageWith(
-                argThat(
-                    executionFailure ->
-                        executionFailure.statusCode() == HttpStatusCode.INTERNAL_SERVER_ERROR_500 &&
-                        executionFailure.key().equals(WEBHOOK_UNREACHABLE_KEY) &&
-                        executionFailure.message().equals(WEBHOOK_UNREACHABLE_MESSAGE)
+                argThat(executionFailure ->
+                    executionFailure.statusCode() == HttpStatusCode.INTERNAL_SERVER_ERROR_500 &&
+                    executionFailure.key().equals(WEBHOOK_UNREACHABLE_KEY) &&
+                    executionFailure.message().equals(WEBHOOK_UNREACHABLE_MESSAGE)
                 )
             );
 
@@ -475,11 +476,10 @@ class WebhookEntrypointConnectorTest {
 
         verify(ctx)
             .interruptMessageWith(
-                argThat(
-                    executionFailure ->
-                        executionFailure.statusCode() == HttpStatusCode.INTERNAL_SERVER_ERROR_500 &&
-                        executionFailure.key().equals(MESSAGE_PROCESSING_FAILED_KEY) &&
-                        executionFailure.message().equals(MESSAGE_PROCESSING_FAILED_MESSAGE)
+                argThat(executionFailure ->
+                    executionFailure.statusCode() == HttpStatusCode.INTERNAL_SERVER_ERROR_500 &&
+                    executionFailure.key().equals(MESSAGE_PROCESSING_FAILED_KEY) &&
+                    executionFailure.message().equals(MESSAGE_PROCESSING_FAILED_MESSAGE)
                 )
             );
         verify(message).error(true);
