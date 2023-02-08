@@ -277,11 +277,11 @@ public class ApiSearchServiceImpl extends AbstractService implements ApiSearchSe
         }
         if (query.getLifecycleStates() != null) {
             builder.lifecycleStates(
-                    query
-                            .getLifecycleStates()
-                            .stream()
-                            .map(apiLifecycleState -> ApiLifecycleState.valueOf(apiLifecycleState.name()))
-                            .collect(toList())
+                query
+                    .getLifecycleStates()
+                    .stream()
+                    .map(apiLifecycleState -> ApiLifecycleState.valueOf(apiLifecycleState.name()))
+                    .collect(toList())
             );
         }
         if (query.getIds() != null && !query.getIds().isEmpty()) {
@@ -296,27 +296,27 @@ public class ApiSearchServiceImpl extends AbstractService implements ApiSearchSe
 
     @Override
     public Collection<String> searchIds(
-            final ExecutionContext executionContext,
-            final String query,
-            final Map<String, Object> filters,
-            final Sortable sortable
+        final ExecutionContext executionContext,
+        final String query,
+        final Map<String, Object> filters,
+        final Sortable sortable
     ) {
         return searchIds(executionContext, query, filters, sortable, false);
     }
 
     @Override
     public Collection<String> searchIds(
-            final ExecutionContext executionContext,
-            final String query,
-            final Map<String, Object> filters,
-            final Sortable sortable,
-            final boolean excludeV4Definition
+        final ExecutionContext executionContext,
+        final String query,
+        final Map<String, Object> filters,
+        final Sortable sortable,
+        final boolean excludeV4Definition
     ) {
         QueryBuilder<GenericApiEntity> searchEngineQueryBuilder = QueryBuilder
-                .create(GenericApiEntity.class)
-                .setQuery(query)
-                .setSort(sortable)
-                .setFilters(filters);
+            .create(GenericApiEntity.class)
+            .setQuery(query)
+            .setSort(sortable)
+            .setFilters(filters);
         if (excludeV4Definition) {
             searchEngineQueryBuilder.setExcludedFilters(Map.of(FIELD_DEFINITION_VERSION, List.of(DefinitionVersion.V4.getLabel())));
         }

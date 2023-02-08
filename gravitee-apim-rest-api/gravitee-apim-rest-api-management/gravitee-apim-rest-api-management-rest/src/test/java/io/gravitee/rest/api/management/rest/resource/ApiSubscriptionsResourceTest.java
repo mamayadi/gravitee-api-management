@@ -197,8 +197,9 @@ public class ApiSubscriptionsResourceTest extends AbstractResourceTest {
     @Test
     public void shouldCreateSubscriptionWithConfiguration() {
         NewSubscriptionConfigurationEntity configuration = mock(NewSubscriptionConfigurationEntity.class);
-        when(configuration.getConfiguration()).thenReturn("{}");
-        when(configuration.getFilter()).thenReturn("my-filter");
+        SubscriptionConfigurationEntity configurationEntity = new SubscriptionConfigurationEntity();
+        configurationEntity.setEntrypointConfiguration("{}");
+        when(configuration.getConfiguration()).thenReturn(configurationEntity);
 
         ArgumentCaptor<NewSubscriptionEntity> newSubscriptionEntityCaptor = ArgumentCaptor.forClass(NewSubscriptionEntity.class);
 
