@@ -768,6 +768,8 @@
                 <gravitee-endpoint-kafka-advanced.version>1.0.1-alpha.2</gravitee-endpoint-kafka-advanced.version>
                 <gravitee-endpoint-mqtt5-advanced.version>1.0.0-alpha.4</gravitee-endpoint-mqtt5-advanced.version>
 
+                <!-- Solace -->
+                <gravitee-endpoint-solace.version>1.0.0-SNAPSHOT</gravitee-endpoint-solace.version>
                 <!-- Management API Only -->
                 <!-- Gateway Only -->
             </properties>
@@ -807,6 +809,14 @@
                     <groupId>com.graviteesource.endpoint</groupId>
                     <artifactId>gravitee-endpoint-mqtt5-advanced</artifactId>
                     <version>${gravitee-endpoint-mqtt5-advanced.version}</version>
+                    <type>zip</type>
+                    <scope>runtime</scope>
+                </dependency>
+                <!-- Solace -->
+                <dependency>
+                    <groupId>io.gravitee.apim.plugin.endpoint</groupId>
+                    <artifactId>gravitee-apim-plugin-endpoint-solace</artifactId>
+                    <version>${gravitee-endpoint-solace.version}</version>
                     <type>zip</type>
                     <scope>runtime</scope>
                 </dependency>

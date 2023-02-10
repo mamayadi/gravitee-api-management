@@ -39,6 +39,7 @@
     <properties>
         <!--suppress UnresolvedMavenProperty -->
         <gravitee.management.log.dir>${gravitee.home}/logs</gravitee.management.log.dir>
+        <gravitee-services-sync-solace.version>1.0.0-SNAPSHOT</gravitee-services-sync-solace.version>
     </properties>
 
     <modules>
@@ -156,4 +157,28 @@
             </plugin>
         </plugins>
     </build>
+    <profiles>
+        <profile>
+            <id>distribution-dev</id>
+            <activation>
+                <property>
+                    <name>distribution-dev</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <properties>
+                <!-- Solace -->
+                <gravitee-endpoint-solace.version>1.0.0-SNAPSHOT</gravitee-endpoint-solace.version>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>com.graviteesource</groupId>
+                    <artifactId>gravitee-apim-rest-api-services-sync-solace</artifactId>
+                    <version>${gravitee-services-sync-solace.version}</version>
+                    <scope>runtime</scope>
+                    <type>zip</type>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
 </project>
