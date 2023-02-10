@@ -117,7 +117,7 @@ export class ApiSubscribeComponent implements OnInit {
 
     this.subscribeForm = this.formBuilder.group({
       channel: new FormControl(null),
-      entrypoint: new FormControl(null, [Validators.required]),
+      entrypoint: new FormControl(null),
       entrypointConfiguration: new FormControl(null),
       application: new FormControl(null, [Validators.required]),
       apiKeyMode: new FormControl(null),
