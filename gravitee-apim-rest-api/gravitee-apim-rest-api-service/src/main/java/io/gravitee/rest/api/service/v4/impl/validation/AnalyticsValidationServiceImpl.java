@@ -67,6 +67,8 @@ public class AnalyticsValidationServiceImpl extends TransactionalService impleme
             validateAndSanitizeSampling(type, analytics);
             validateAndSanitizeLogging(executionContext, type, analytics);
             return analytics;
+        } else if (analytics != null) {
+            return analytics;
         }
         return new Analytics();
     }
