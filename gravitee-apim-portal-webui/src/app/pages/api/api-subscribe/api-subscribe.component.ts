@@ -678,7 +678,7 @@ export class ApiSubscribeComponent implements OnInit {
   }
 
   private canSubscribe(appSubscriptions: Subscription[], plan: Plan) {
-    if (appSubscriptions && appSubscriptions.length > 0) {
+    if (appSubscriptions && appSubscriptions.length > 0 && plan.security.toUpperCase() !== Plan.SecurityEnum.SUBSCRIPTION) {
       return appSubscriptions.find(subscription => subscription.plan === plan.id) == null;
     }
     return true;
