@@ -221,6 +221,17 @@ export class ApiSubscribeComponent implements OnInit {
           } else {
             this.subscribeForm.get('general_conditions_accepted').clearValidators();
           }
+          if (this.isSubscription()) {
+            this.subscribeForm.get('entrypoint').setValidators(Validators.required);
+          } else {
+            this.subscribeForm.get('channel').setValue(null);
+            this.subscribeForm.get('channel').clearValidators();
+            this.subscribeForm.get('entrypoint').setValue(null);
+            this.subscribeForm.get('entrypoint').clearValidators();
+            this.subscribeForm.get('entrypoint').setValue(null);
+            this.subscribeForm.get('entrypointConfiguration').clearValidators();
+            this.subscribeForm.get('entrypointConfiguration').setValue(null);
+          }
 
           this.subscribeForm.get('general_conditions_accepted').setValue(false);
           this.subscribeForm.get('general_conditions_content_revision').setValue(null);
