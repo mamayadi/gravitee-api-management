@@ -127,9 +127,11 @@ public class SubscriptionsResource extends AbstractResource {
                 SubscriptionConfigurationEntity subscriptionConfigurationEntity = new SubscriptionConfigurationEntity();
                 subscriptionConfigurationEntity.setEntrypointId(inputConfiguration.getEntrypointId());
                 subscriptionConfigurationEntity.setChannel(inputConfiguration.getChannel());
-                subscriptionConfigurationEntity.setEntrypointConfiguration(
-                    MAPPER.valueToTree(inputConfiguration.getEntrypointConfiguration())
-                );
+                if (inputConfiguration.getEntrypointConfiguration() != null) {
+                    subscriptionConfigurationEntity.setEntrypointConfiguration(
+                        MAPPER.valueToTree(inputConfiguration.getEntrypointConfiguration())
+                    );
+                }
                 newSubscriptionEntity.setConfiguration(subscriptionConfigurationEntity);
             }
             SubscriptionEntity createdSubscription = subscriptionService.create(executionContext, newSubscriptionEntity);
