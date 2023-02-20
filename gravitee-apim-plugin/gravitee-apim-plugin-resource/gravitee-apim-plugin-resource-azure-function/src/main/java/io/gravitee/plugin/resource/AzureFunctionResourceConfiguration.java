@@ -1,12 +1,12 @@
 /**
  * Copyright (C) 2015 The Gravitee team (http://gravitee.io)
- * <p>
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,12 +16,17 @@
 package io.gravitee.plugin.resource;
 
 import io.gravitee.resource.api.ResourceConfiguration;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * @author Yann TAVERNIER (yann.tavernier at graviteesource.com)
  * @author GraviteeSource Team
  */
+@Getter
+@Setter
 public class AzureFunctionResourceConfiguration implements ResourceConfiguration {
-    // FIXME: add credentials fields for azure
-    // FIXME: add a field for the code to zip
+    private String functionName;
+    private String azureToken;
+    private String functionCode;
 }

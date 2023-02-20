@@ -1,0 +1,44 @@
+{
+  "type" : "object",
+  "id" : "urn:jsonschema:io:gravitee:resource:cache:configuration:AzureFunctionResourceConfiguration",
+  "properties" : {
+    "functionName" : {
+      "title": "Function name",
+      "description": "Your Azure function name",
+      "type" : "string"
+    },
+    "azureToken" : {
+      "title": "Azure token",
+      "description": "Your Azure authentication token",
+      "type" : "string"
+    },
+    "functionCode" : {
+      "title": "Function Code",
+      "description": "The code of your function",
+      "type" : "string",
+      "x-schema-form": {
+        "type": "codemirror",
+        "codemirrorOptions": {
+          "placeholder": "Put your Java code here or drag and drop a Java file",
+          "lineWrapping": true,
+          "lineNumbers": true,
+          "allowDropFileTypes": true,
+          "autoCloseTags": true,
+          "mode": "java"
+        },
+        "hidden": [
+          {
+            "$eq": {
+              "scope": "RESPONSE"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "required": [
+    "functionName",
+    "azureToken",
+    "functionCode"
+  ]
+}
