@@ -16,6 +16,8 @@
 package io.gravitee.plugin.resource.helpers.javascript;
 
 import io.gravitee.plugin.resource.AzureFunctionResourceConfiguration;
+import io.gravitee.plugin.resource.helpers.AbstractFunctionBuilder;
+import io.gravitee.plugin.resource.helpers.FunctionBuilderException;
 import java.io.*;
 import java.nio.file.Path;
 import java.util.UUID;
@@ -25,7 +27,7 @@ import java.util.zip.ZipOutputStream;
 /**
  * @author GraviteeSource Team
  */
-public class JavascriptFunctionBuilder {
+public class JavascriptFunctionBuilder extends AbstractFunctionBuilder {
 
     private static final String HOST_FILE_NAME = "host.json";
     private static final String FUNCTION_FILE_NAME = "index.js";
@@ -38,16 +40,15 @@ public class JavascriptFunctionBuilder {
 
     private final String functionFile;
     private final String bindingsFile;
-    private final String hostFile;
     private final String functionCode;
     private final String zipFile;
 
     public JavascriptFunctionBuilder(AzureFunctionResourceConfiguration configuration) {
+        super(configuration);
         functionFile = Path.of(configuration.getFunctionName(), FUNCTION_FILE_NAME).toString();
         bindingsFile = Path.of(configuration.getFunctionName(), BINDINGS_FILE_NAME).toString();
         functionCode = configuration.getFunctionCode();
         zipFile = getZipFileName(configuration);
-        hostFile = HOST_FILE_NAME;
     }
 
     @Override
@@ -55,12 +56,14 @@ public class JavascriptFunctionBuilder {
         return LEADING_BLOCK.concat(functionCode).concat(CLOSING_BLOCK);
     }
 
-    public Path buildFunction() throws IOException {
+    public Path buildFunction() throws FunctionBuilderException {
         try (ZipOutputStream zip = new ZipOutputStream(new FileOutputStream(zipFile))) {
             addEntry(zip, functionFile, getCodeAsStream());
             addEntry(zip, bindingsFile, getResourceAsStream(BINDINGS_FILE_NAME));
-            addEntry(zip, hostFile, getResourceAsStream(HOST_FILE_NAME));
+            addEntry(zip, HOST_FILE_NAME, getResourceAsStream(HOST_FILE_NAME));
             return Path.of(zipFile);
+        } catch (IOException e) {
+            throw new FunctionBuilderException(e);
         }
     }
 

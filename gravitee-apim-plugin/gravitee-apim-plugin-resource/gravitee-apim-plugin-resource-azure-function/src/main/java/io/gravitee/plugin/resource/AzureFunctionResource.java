@@ -35,6 +35,6 @@ public class AzureFunctionResource extends AbstractConfigurableResource<AzureFun
         // ⚠️ what if we restart the gateway and function has already been deployed ? Maybe add a "force redeploy" configuration to override the deployed one.
 
         // FIXME: pass the configuration code as a parameter to generate the function needed by the user.
-        final Path javaZipPath = new JavaFunctionBuilder().buildFunction();
+        final Path javaZipPath = new JavaFunctionBuilder(configuration()).buildFunction();
     }
 }
