@@ -115,6 +115,7 @@
         <!--    Version of policy-ratelimit is also used for policy-quota, policy-spikearrest and gateway-services-ratelimit    -->
         <!--    <gravitee-gateway-services-ratelimit.version>1.15.0</gravitee-gateway-services-ratelimit.version>    -->
         <gravitee-tracer-jaeger.version>1.2.0</gravitee-tracer-jaeger.version>
+
     </properties>
 
     <dependencies>
@@ -703,6 +704,22 @@
             <version>${gravitee-tracer-jaeger.version}</version>
             <type>zip</type>
             <scope>runtime</scope>
+        </dependency>
+
+        <!-- Azure Functions -->
+        <dependency>
+            <groupId>io.gravitee.apim.plugin.policy</groupId>
+            <artifactId>gravitee-apim-plugin-policy-azure-function</artifactId>
+            <version>${project.version}</version>
+            <scope>runtime</scope>
+            <type>zip</type>
+        </dependency>
+        <dependency>
+            <groupId>io.gravitee.apim.plugin.resource</groupId>
+            <artifactId>gravitee-apim-plugin-resource-azure-function</artifactId>
+            <version>${project.version}</version>
+            <scope>runtime</scope>
+            <type>zip</type>
         </dependency>
     </dependencies>
 
