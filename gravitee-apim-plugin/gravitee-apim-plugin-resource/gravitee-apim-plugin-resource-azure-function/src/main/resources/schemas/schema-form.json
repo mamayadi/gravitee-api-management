@@ -19,12 +19,12 @@
       "x-schema-form": {
         "type": "codemirror",
         "codemirrorOptions": {
-          "placeholder": "Put your Java code here or drag and drop a Java file",
+          "placeholder": "Put your code here or drag and drop a javascript file",
           "lineWrapping": true,
           "lineNumbers": true,
           "allowDropFileTypes": true,
           "autoCloseTags": true,
-          "mode": "java"
+          "mode": "javascript"
         },
         "hidden": [
           {

@@ -13,21 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.plugin.resource;
+package io.gravitee.plugin.resource.functions.azure;
 
-import io.gravitee.resource.api.ResourceConfiguration;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Value;
 
 /**
- * @author Yann TAVERNIER (yann.tavernier at graviteesource.com)
  * @author GraviteeSource Team
  */
-@Getter
-@Setter
-public class AzureFunctionResourceConfiguration implements ResourceConfiguration {
+@Value
+public class Function {
 
-    private String functionName;
-    private String azureToken;
-    private String functionCode;
+    private static final String LEADING_BLOCK = "module.exports = async function (context, req) {";
+    private static final String CLOSING_BLOCK = "}";
+
+    String code;
+
+    @Override
+    public String toString() {
+        return LEADING_BLOCK.concat(code).concat(CLOSING_BLOCK);
+    }
+
+    public String fileName() {
+        return "index.js";
+    }
 }
