@@ -16,10 +16,23 @@
 package io.gravitee.plugin.resource;
 
 import io.gravitee.plugin.resource.functions.azure.Function;
+import io.gravitee.plugin.resource.helpers.java.JavaFunctionBuilder;
 import io.gravitee.resource.api.AbstractConfigurableResource;
 import java.io.*;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import org.apache.maven.shared.invoker.DefaultInvocationRequest;
+import org.apache.maven.shared.invoker.DefaultInvoker;
+import org.apache.maven.shared.invoker.InvocationRequest;
+import org.apache.maven.shared.invoker.InvocationResult;
+import org.apache.maven.shared.invoker.Invoker;
 
 /**
  * @author Yann TAVERNIER (yann.tavernier at graviteesource.com)
@@ -40,6 +53,9 @@ public class AzureFunctionResource extends AbstractConfigurableResource<AzureFun
         // Then, push the zip to azure thanks to https://learn.microsoft.com/en-us/azure/azure-functions/deployment-zip-push#rest
 
         // ⚠️ what if we restart the gateway and function has already been deployed ? Maybe add a "force redeploy" configuration to override the deployed one.
+
+        // FIXME: pass the configuration code as a parameter to generate the function needed by the user.
+        final Path javaZipPath = new JavaFunctionBuilder().buildFunction();
     }
 
     private void zipFunction(Function function) throws IOException {

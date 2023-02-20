@@ -707,20 +707,20 @@
         </dependency>
 
         <!-- Azure Functions -->
-        <dependency>
-            <groupId>io.gravitee.apim.plugin.policy</groupId>
-            <artifactId>gravitee-apim-plugin-policy-azure-function</artifactId>
-            <version>${project.version}</version>
-            <scope>runtime</scope>
-            <type>zip</type>
-        </dependency>
-        <dependency>
-            <groupId>io.gravitee.apim.plugin.resource</groupId>
-            <artifactId>gravitee-apim-plugin-resource-azure-function</artifactId>
-            <version>${project.version}</version>
-            <scope>runtime</scope>
-            <type>zip</type>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>io.gravitee.apim.plugin.policy</groupId>-->
+<!--            <artifactId>gravitee-apim-plugin-policy-azure-function</artifactId>-->
+<!--            <version>${project.version}</version>-->
+<!--            <scope>runtime</scope>-->
+<!--            <type>zip</type>-->
+<!--        </dependency>-->
+<!--        <dependency>-->
+<!--            <groupId>io.gravitee.apim.plugin.resource</groupId>-->
+<!--            <artifactId>gravitee-apim-plugin-resource-azure-function</artifactId>-->
+<!--            <version>${project.version}</version>-->
+<!--            <scope>runtime</scope>-->
+<!--            <type>zip</type>-->
+<!--        </dependency>-->
     </dependencies>
 
     <build>
