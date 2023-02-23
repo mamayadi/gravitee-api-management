@@ -531,6 +531,9 @@ import { ApiCreationV4Component } from './api/creation/v4/api-creation-v4.compon
 import { ApiPathMappingsComponent } from './api/analytics/pathMappings/api-path-mappings.component';
 import { ApiCreationV4ConfirmationComponent } from './api/creation/v4/api-creation-v4-confirmation.component';
 import { ApiPortalGroupsComponent } from './api/portal/user-group-access/groups/api-portal-groups.component';
+import { ApiPortalMembersComponent } from './api/portal/user-group-access/members/api-portal-members.component';
+import SearchAndSelectComponent from '../components/search-and-select/search-and-select.component';
+import { SearchAndSelectController } from '../components/search-and-select/search-and-select.controller';
 
 (<any>window).moment = moment;
 require('angular-moment-picker');
@@ -696,6 +699,7 @@ graviteeManagementModule.controller('ApiAnalyticsController', ApiAnalyticsContro
 graviteeManagementModule.controller('ApiPoliciesController', ApiPoliciesController);
 graviteeManagementModule.controller('AddPoliciesPathController', AddPoliciesPathController);
 graviteeManagementModule.controller('ApiMembersController', ApiMembersController);
+graviteeManagementModule.directive('ngApiMembers', downgradeComponent({ component: ApiPortalMembersComponent }));
 graviteeManagementModule.controller('ApiTransferOwnershipController', ApiTransferOwnershipController);
 graviteeManagementModule.controller('ApiHealthCheckController', ApiHealthCheckController);
 graviteeManagementModule.controller('ApiPropertiesController', ApiPropertiesController);
@@ -957,6 +961,8 @@ graviteeManagementModule.component('log', LogComponent);
 graviteeManagementModule.component('gvLogsFilters', LogsFiltersComponent);
 graviteeManagementModule.controller('LogsFiltersController', LogsFiltersController);
 graviteeManagementModule.controller('configureLoggingDialogController', ConfigureLoggingDialogController);
+graviteeManagementModule.component('gvSearchAndSelect', SearchAndSelectComponent);
+graviteeManagementModule.controller('SearchAndSelectController', SearchAndSelectController);
 
 graviteeManagementModule.component('gvAudit', AuditComponent);
 graviteeManagementModule.component('gvNewsletterReminder', NewsletterReminderComponent);

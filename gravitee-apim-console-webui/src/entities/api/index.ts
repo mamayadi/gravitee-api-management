@@ -15,3 +15,5 @@
  */
 export * from './Api';
 export * from './UpdateApi';
+export * from './ApiMembers';
+export * from './ApiMembership';
