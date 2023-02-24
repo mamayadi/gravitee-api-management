@@ -33,6 +33,8 @@ import { Step5DocumentationHarness } from './steps/step-5-documentation/step-5-d
 import { Step2Entrypoints2ConfigComponent } from './steps/step-2-entrypoints/step-2-entrypoints-2-config.component';
 import { Step2Entrypoints2ConfigHarness } from './steps/step-2-entrypoints/step-2-entrypoints-2-config.harness';
 import { Step3Endpoints2ConfigHarness } from './steps/step-3-endpoints/step-3-endpoints-2-config.harness';
+import { Step1ApiDetailsComponent } from './steps/step-1-api-details/step-1-api-details.component';
+import { Step2Entrypoints1ListComponent } from './steps/step-2-entrypoints/step-2-entrypoints-1-list.component';
 
 import { UIRouterState } from '../../../../ajs-upgraded-providers';
 import { CONSTANTS_TESTING, GioHttpTestingModule } from '../../../../shared/testing';
@@ -82,22 +84,23 @@ describe('ApiCreationV4Component', () => {
 
   describe('menu', () => {
     it('should have 6 steps', (done) => {
-      component.stepper.validStepAndGoNext(() => ({ name: 'A1' }));
-      component.stepper.addSecondaryStep({ component: Step2Entrypoints2ConfigComponent });
-      component.stepper.addSecondaryStep({ component: Step2Entrypoints2ConfigComponent });
-      component.stepper.validStepAndGoNext(({ name }) => ({ name: `${name}>B1` }));
-      component.stepper.validStepAndGoNext(({ name }) => ({ name: `${name}>B2` }));
+      component.stepper.goToNextStep({ groupNumber: 1, component: Step1ApiDetailsComponent });
+      component.stepper.validStep(() => ({ name: 'A1' }));
+      component.stepper.goToNextStep({ groupNumber: 2, component: Step2Entrypoints1ListComponent });
+      component.stepper.validStep(({ name }) => ({ name: `${name}>B1` }));
+      component.stepper.goToNextStep({ groupNumber: 2, component: Step2Entrypoints2ConfigComponent });
+      component.stepper.validStep(({ name }) => ({ name: `${name}>B2` }));
 
-      component.menuSteps$.subscribe((steps) => {
-        expect(steps.length).toEqual(6);
-        expect(steps[0].label).toEqual('API details');
-        expect(steps[1].label).toEqual('Entrypoints');
+      component.menuSteps$.subscribe((menuSteps) => {
+        expect(menuSteps.length).toEqual(6);
+        expect(menuSteps[0].label).toEqual('API details');
+        expect(menuSteps[1].label).toEqual('Entrypoints');
         // Expect to have the last valid step payload
-        expect(steps[1].payload).toEqual({ name: 'A1>B1>B2' });
-        expect(steps[2].label).toEqual('Endpoints');
-        expect(steps[3].label).toEqual('Security');
-        expect(steps[4].label).toEqual('Documentation');
-        expect(steps[5].label).toEqual('Summary');
+        expect(menuSteps[1].payload).toEqual({ name: 'A1>B1>B2' });
+        expect(menuSteps[2].label).toEqual('Endpoints');
+        expect(menuSteps[3].label).toEqual('Security');
+        expect(menuSteps[4].label).toEqual('Documentation');
+        expect(menuSteps[5].label).toEqual('Summary');
         done();
       });
     });
@@ -112,7 +115,7 @@ describe('ApiCreationV4Component', () => {
     it('should save api details and move to next step', async () => {
       const step1Harness = await harnessLoader.getHarness(Step1ApiDetailsHarness);
       expect(step1Harness).toBeDefined();
-      expect(component.currentStep.label).toEqual('API details');
+      expect(component.currentStep.group.label).toEqual('API details');
       await step1Harness.fillAndValidate('test API', '1', 'description');
       expectEntrypointsGetRequest([]);
 
@@ -120,13 +123,13 @@ describe('ApiCreationV4Component', () => {
 
       component.stepper.compileStepPayload(component.currentStep);
       expect(component.currentStep.payload).toEqual({ name: 'test API', version: '1', description: 'description' });
-      expect(component.currentStep.label).toEqual('Entrypoints');
+      expect(component.currentStep.group.label).toEqual('Entrypoints');
     });
 
     it('should save api details and move to next step (description is optional)', async () => {
       const step1Harness = await harnessLoader.getHarness(Step1ApiDetailsHarness);
       expect(step1Harness).toBeDefined();
-      expect(component.currentStep.label).toEqual('API details');
+      expect(component.currentStep.group.label).toEqual('API details');
       await step1Harness.setName('API');
       await step1Harness.setVersion('1.0');
       await step1Harness.clickValidate();
@@ -136,7 +139,7 @@ describe('ApiCreationV4Component', () => {
 
       component.stepper.compileStepPayload(component.currentStep);
       expect(component.currentStep.payload).toEqual({ name: 'API', version: '1.0', description: '' });
-      expect(component.currentStep.label).toEqual('Entrypoints');
+      expect(component.currentStep.group.label).toEqual('Entrypoints');
     });
 
     it('should exit without confirmation when no modification', async () => {
@@ -158,7 +161,7 @@ describe('ApiCreationV4Component', () => {
       expect(await dialogHarness).toBeTruthy();
 
       await dialogHarness.cancel();
-      expect(component.currentStep.label).toEqual('API details');
+      expect(component.currentStep.group.label).toEqual('API details');
 
       fixture.detectChanges();
       expect(fakeAjsState.go).not.toHaveBeenCalled();
@@ -189,7 +192,7 @@ describe('ApiCreationV4Component', () => {
       expectEntrypointsGetRequest([]);
 
       await step2Harness.clickPrevious();
-      expect(component.currentStep.label).toEqual('API details');
+      expect(component.currentStep.group.label).toEqual('API details');
 
       const step1Harness = await harnessLoader.getHarness(Step1ApiDetailsHarness);
       expect(step1Harness).toBeDefined();
@@ -422,7 +425,8 @@ describe('ApiCreationV4Component', () => {
   describe('step3', () => {
     it('should go back to step2 with API details restored when clicking on previous', async () => {
       await fillAndValidateStep1ApiDetails('API', '1.0', 'Description');
-      await fillAndValidateStep2Entrypoints();
+      await fillAndValidateStep2Entrypoints1List();
+      await fillAndValidateStep2Entrypoints2Config();
 
       const step3Harness = await harnessLoader.getHarness(Step3EndpointListHarness);
       expectEndpointsGetRequest([]);
@@ -472,7 +476,8 @@ describe('ApiCreationV4Component', () => {
 
     it('should display only async endpoints in the list', async () => {
       await fillAndValidateStep1ApiDetails('API', '1.0', 'Description');
-      await fillAndValidateStep2Entrypoints();
+      await fillAndValidateStep2Entrypoints1List();
+      await fillAndValidateStep2Entrypoints2Config();
       const step3Harness = await harnessLoader.getHarness(Step3EndpointListHarness);
 
       expectEndpointsGetRequest([
@@ -487,7 +492,8 @@ describe('ApiCreationV4Component', () => {
 
     it('should select endpoints in the list', async () => {
       await fillAndValidateStep1ApiDetails('API', '1.0', 'Description');
-      await fillAndValidateStep2Entrypoints();
+      await fillAndValidateStep2Entrypoints1List();
+      await fillAndValidateStep2Entrypoints2Config();
 
       const step3Harness = await harnessLoader.getHarness(Step3EndpointListHarness);
       expect(step3Harness).toBeTruthy();
@@ -517,7 +523,8 @@ describe('ApiCreationV4Component', () => {
 
     it('should configure endpoints in the list', async () => {
       await fillAndValidateStep1ApiDetails('API', '1.0', 'Description');
-      await fillAndValidateStep2Entrypoints();
+      await fillAndValidateStep2Entrypoints1List();
+      await fillAndValidateStep2Entrypoints2Config();
 
       const step3Harness = await harnessLoader.getHarness(Step3EndpointListHarness);
       expect(step3Harness).toBeTruthy();
@@ -547,7 +554,7 @@ describe('ApiCreationV4Component', () => {
       const step3Endpoints2ConfigHarness = await harnessLoader.getHarness(Step3Endpoints2ConfigHarness);
       await step3Endpoints2ConfigHarness.clickValidate();
 
-      expect(component.currentStep.payload.endpoints).toEqual([
+      expect(component.currentStep.payload.selectedEndpoints).toEqual([
         {
           configuration: {
             headersInPayload: false,
@@ -555,7 +562,8 @@ describe('ApiCreationV4Component', () => {
             messagesLimitDurationMs: 5000,
             metadataInPayload: false,
           },
-          type: 'kafka',
+          id: 'kafka',
+          name: 'Kafka',
         },
         {
           configuration: {
@@ -564,7 +572,8 @@ describe('ApiCreationV4Component', () => {
             messagesLimitDurationMs: 5000,
             metadataInPayload: false,
           },
-          type: 'mock',
+          id: 'mock',
+          name: 'Mock',
         },
       ]);
     });
@@ -573,12 +582,13 @@ describe('ApiCreationV4Component', () => {
   describe('step6', () => {
     beforeEach(async () => {
       await fillAndValidateStep1ApiDetails();
-      await fillAndValidateStep2Entrypoints();
-      await fillAndValidateStep3Endpoints();
+      await fillAndValidateStep2Entrypoints1List();
+      await fillAndValidateStep2Entrypoints2Config();
+      await fillAndValidateStep3Endpoints1List();
+      await fillAndValidateStep3Endpoints2Config();
       await fillAndValidateStep4Security();
       await fillAndValidateStep5Documentation();
       fixture.detectChanges();
-      fixture.detectChanges(); // TODO: remove this when fill step 2-1 exist
     });
 
     it('should display payload info', async () => {
@@ -631,7 +641,8 @@ describe('ApiCreationV4Component', () => {
       fixture.detectChanges();
       await fillAndValidateStep2Entrypoints2Config([{ id: 'entrypoint-2', name: 'new entrypoint' }], ['/my-api/v4']);
 
-      await fillAndValidateStep3Endpoints();
+      await fillAndValidateStep3Endpoints1List();
+      await fillAndValidateStep3Endpoints2Config();
       await fillAndValidateStep4Security();
       await fillAndValidateStep5Documentation();
 
@@ -657,8 +668,10 @@ describe('ApiCreationV4Component', () => {
 
       expect(await list.getListValues({ selected: true })).toEqual(['kafka', 'mock']);
       await list.deselectOptionByValue('kafka');
+      expect(await list.getListValues({ selected: true })).toEqual(['mock']);
       fixture.detectChanges();
       await step3Harness.clickValidate();
+
       await fillAndValidateStep3Endpoints2Config([{ id: 'mock', supportedApiType: 'async', name: 'Mock' }]);
 
       await fillAndValidateStep4Security();
@@ -731,19 +744,16 @@ describe('ApiCreationV4Component', () => {
     await step1Harness.fillAndValidate(name, version, description);
   }
 
-  async function fillAndValidateStep2Entrypoints(
+  async function fillAndValidateStep2Entrypoints1List(
     entrypoints: Partial<ConnectorListItem>[] = [
       { id: 'entrypoint-1', name: 'initial entrypoint', supportedApiType: 'async' },
       { id: 'entrypoint-2', name: 'new entrypoint', supportedApiType: 'async' },
     ],
-    paths: string[] = ['/api/my-api-3'],
   ) {
     const step2Harness = await harnessLoader.getHarness(Step2Entrypoints1ListHarness);
     expectEntrypointsGetRequest(entrypoints);
 
     await step2Harness.fillAndValidate(entrypoints.map((entrypoint) => entrypoint.id));
-
-    await fillAndValidateStep2Entrypoints2Config(entrypoints, paths);
   }
 
   async function fillAndValidateStep2Entrypoints2Config(
@@ -762,7 +772,7 @@ describe('ApiCreationV4Component', () => {
     expectVerifyContextPathGetRequest();
   }
 
-  async function fillAndValidateStep3Endpoints(
+  async function fillAndValidateStep3Endpoints1List(
     endpoints: Partial<ConnectorListItem>[] = [
       { id: 'kafka', supportedApiType: 'async', name: 'Kafka' },
       { id: 'mock', supportedApiType: 'async', name: 'Mock' },
@@ -772,8 +782,6 @@ describe('ApiCreationV4Component', () => {
     expectEndpointsGetRequest(endpoints);
 
     await step3Harness.fillAndValidate(endpoints.map((endpoint) => endpoint.id));
-
-    await fillAndValidateStep3Endpoints2Config(endpoints);
   }
 
   async function fillAndValidateStep3Endpoints2Config(

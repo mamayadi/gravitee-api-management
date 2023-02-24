@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (C) 2015 The Gravitee team (http://gravitee.io)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,30 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Listener } from '../../../../../entities/api-v4';
+package io.gravitee.definition.model.v4.flow.execution;
 
-export type ApiCreationPayload = Partial<{
-  // API details
-  name?: string;
-  version?: string;
-  description?: string;
+import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
+import com.fasterxml.jackson.annotation.JsonValue;
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
-  // Entrypoints
-  type?: 'sync' | 'async';
-  listeners?: Listener[];
-  selectedEntrypoints?: {
-    id: string;
-    name: string;
-    supportedListenerType: string;
-  }[];
+/**
+ * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
+ * @author GraviteeSource Team
+ */
+@RequiredArgsConstructor
+@Getter
+@Schema(name = "FlowModeV4")
+public enum FlowMode {
+    @JsonEnumDefaultValue
+    DEFAULT("default"),
+    BEST_MATCH("best-match");
 
-  // Endpoints
-  selectedEndpoints?: {
-    id: string;
-    name: string;
-    configuration?: unknown;
-  }[];
-
-  // Summary
-  deploy: boolean;
-}>;
+    @JsonValue
+    private final String label;
+}

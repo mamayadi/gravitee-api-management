@@ -32,7 +32,7 @@ import { ConnectorVM } from '../../models/ConnectorVM';
   template: require('./step-2-entrypoints-1-list.component.html'),
   styles: [require('./step-2-entrypoints-1-list.component.scss'), require('../api-creation-steps-common.component.scss')],
 })
-export class Step2Entrypoints1List implements OnInit, OnDestroy {
+export class Step2Entrypoints1ListComponent implements OnInit, OnDestroy {
   private unsubscribe$: Subject<void> = new Subject<void>();
 
   public formGroup: FormGroup;
@@ -86,14 +86,15 @@ export class Step2Entrypoints1List implements OnInit, OnDestroy {
       .map(({ id, name, supportedListenerType }) => ({ id, name, supportedListenerType }))
       .filter((e) => selectedEntrypointsIds.includes(e.id));
 
-    this.stepService.addSecondaryStep({
-      component: Step2Entrypoints2ConfigComponent,
-    });
-
-    this.stepService.validStepAndGoNext((previousPayload) => ({
+    this.stepService.validStep((previousPayload) => ({
       ...previousPayload,
       selectedEntrypoints,
     }));
+
+    this.stepService.goToNextStep({
+      groupNumber: 2,
+      component: Step2Entrypoints2ConfigComponent,
+    });
   }
 
   goBack(): void {
