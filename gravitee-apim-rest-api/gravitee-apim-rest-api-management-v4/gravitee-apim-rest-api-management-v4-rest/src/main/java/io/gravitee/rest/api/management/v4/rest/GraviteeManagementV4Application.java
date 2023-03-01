@@ -30,8 +30,6 @@ import io.gravitee.rest.api.management.v4.rest.resource.api.ApiResource;
 import io.gravitee.rest.api.management.v4.rest.resource.api.ApisResource;
 import io.gravitee.rest.api.management.v4.rest.resource.connector.EndpointsResource;
 import io.gravitee.rest.api.management.v4.rest.resource.connector.EntrypointsResource;
-import io.gravitee.rest.api.management.v4.rest.resource.installation.EnvironmentsResource;
-import io.gravitee.rest.api.management.v4.rest.resource.installation.OrganizationResource;
 import javax.inject.Inject;
 import org.glassfish.jersey.jackson.JacksonFeature;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
@@ -48,8 +46,6 @@ public class GraviteeManagementV4Application extends ResourceConfig {
     @Inject
     public GraviteeManagementV4Application() {
         //Main resource
-        register(OrganizationResource.class);
-        register(EnvironmentsResource.class);
         register(ApiResource.class);
         register(ApisResource.class);
         register(EndpointsResource.class);

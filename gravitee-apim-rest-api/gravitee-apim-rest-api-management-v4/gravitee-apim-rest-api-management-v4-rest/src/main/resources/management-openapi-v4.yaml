@@ -28,65 +28,10 @@ servers:
               default: 4-0-x
 
 paths:
-    /organizations/{orgId}:
-        parameters:
-            - $ref: "#/components/parameters/orgIdParam"
-        get:
-            tags:
-                - Installation
-            summary: Get a specific organization
-            description: |-
-                # FIXME add a description
-            operationId: getOrganizationById
-            responses:
-                "200":
-                    description: An organization
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Organization"
-                default:
-                    $ref: "#/components/responses/Error"
-    /environments:
+    /apis:
         get:
             parameters:
-                - $ref: "#/components/parameters/pageParam"
-                - $ref: "#/components/parameters/perPageParam"
-            tags:
-                - Installation
-            summary: List all environments of a specific organization
-            description: |-
-                # FIXME add a description
-            operationId: getEnvironments
-            responses:
-                "200":
-                    $ref: "#/components/responses/EnvironmentsResponse"
-                default:
-                    $ref: "#/components/responses/Error"
-    /environments/{envId}:
-        parameters:
-            - $ref: "#/components/parameters/envIdParam"
-        get:
-            tags:
-                - Installation
-            summary: Get a specific environment
-            description: |-
-                # FIXME add a description
-            operationId: getEnvironmentById
-            responses:
-                "200":
-                    description: An environment
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Environment"
-                default:
-                    $ref: "#/components/responses/Error"
-    /environments/{envId}/apis:
-        parameters:
-            - $ref: "#/components/parameters/envIdParam"
-        get:
-            parameters:
+                - $ref: "#/components/parameters/environmentIdParam"
                 - $ref: "#/components/parameters/pageParam"
                 - $ref: "#/components/parameters/perPageParam"
             tags:
@@ -990,23 +935,6 @@ components:
                     nullable: false
                 configuration:
                     type: object
-        Environment:
-            type: object
-            properties:
-                id:
-                    type: string
-                    description: Environment's uuid.
-                    example: 00f8c9e7-78fc-4907-b8c9-e778fc790750
-                name:
-                    type: string
-                    description: Environment's name. Duplicate names can exists.
-                    example: My Environment
-                    minLength: 1
-                description:
-                    type: string
-                    description: Environment's description. A short description of your Environment.
-                    example: I can use many characters to describe this Environment.
-                    minLength: 1
         Error:
             type: object
             properties:
@@ -1168,23 +1096,6 @@ components:
                     type: boolean
                 dynamic:
                     type: boolean
-        Organization:
-            type: object
-            properties:
-                id:
-                    type: string
-                    description: Organization's uuid.
-                    example: 00f8c9e7-78fc-4907-b8c9-e778fc790750
-                name:
-                    type: string
-                    description: Organization's name. Duplicate names can exists.
-                    example: My Organization
-                    minLength: 1
-                description:
-                    type: string
-                    description: Organization's description. A short description of your Organization.
-                    example: I can use many characters to describe this Organization.
-                    minLength: 1
         Plan:
             type: object
             properties:
@@ -1400,22 +1311,6 @@ components:
         #############
         # PathParam #
         #############
-        orgIdParam:
-            name: orgId
-            in: path
-            required: true
-            description: Id of an organization.
-            schema:
-                type: string
-                default: DEFAULT
-        envIdParam:
-            name: envId
-            in: path
-            required: true
-            description: Id of an environment.
-            schema:
-                type: string
-                default: DEFAULT
         apiIdParam:
             name: apiId
             in: path
@@ -1447,6 +1342,14 @@ components:
         ###############################
         # Pagination Query Parameters #
         ###############################
+        environmentIdParam:
+            name: environmentId
+            in: query
+            required: true
+            description: Id of an environment.
+            schema:
+                type: string
+                default: DEFAULT
         pageParam:
             name: page
             in: query
@@ -1466,21 +1369,6 @@ components:
                 default: 10
 
     responses:
-        EnvironmentsResponse:
-            description: Page of environments
-            content:
-                application/json:
-                    schema:
-                        properties:
-                            data:
-                                description: List of Environments.
-                                type: array
-                                items:
-                                    $ref: "#/components/schemas/Environment"
-                            metadata:
-                                $ref: "#/components/schemas/MetadataResponse"
-                            links:
-                                $ref: "#/components/schemas/Links"
         ApisResponse:
             description: Page of apis
             content:
