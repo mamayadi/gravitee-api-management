@@ -120,7 +120,7 @@ public class EntrypointResource {
     @Path("subscriptionSchema")
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(
-        summary = "🧪 Get a entrypoint's subscription schema",
+        summary = "🧪 Get an entrypoint subscription schema",
         description = "⚠️ This resource is in alpha version. This implies that it is likely to be modified or even removed in future versions. ⚠️. <br><br>User must have the ENVIRONMENT_API[READ] permission to use this service"
     )
     @ApiResponse(
@@ -130,7 +130,7 @@ public class EntrypointResource {
     )
     @ApiResponse(responseCode = "404", description = "Entrypoint not found")
     @ApiResponse(responseCode = "500", description = "Internal server error")
-    @ApiResponse(responseCode = "204", description = "Subscription schema not found")
+    @ApiResponse(responseCode = "500", description = "Subscription schema not found")
     @Permissions({ @Permission(value = RolePermission.ENVIRONMENT_API, acls = RolePermissionAction.READ) })
     public String getEntrypointSubscriptionSchema(@PathParam("entrypoint") String entrypoint) {
         // Check that the entrypoint exists
