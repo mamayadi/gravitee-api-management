@@ -15,9 +15,10 @@
  */
 package io.gravitee.rest.api.management.rest.resource.v4.endpoint;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.when;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.*;
 
 import io.gravitee.common.http.HttpStatusCode;
 import io.gravitee.definition.model.v4.ApiType;
@@ -63,17 +64,17 @@ public class EndpointsResourceTest extends AbstractResourceTest {
         when(endpointConnectorPluginService.findAll()).thenReturn(Set.of(connectorPlugin));
 
         final Response response = envTarget().request().get();
-        assertEquals(HttpStatusCode.OK_200, response.getStatus());
-        final List<Map<String, String>> pluginEntities = response.readEntity(List.class);
-        assertEquals(1, pluginEntities.size());
-        Map<String, String> pluginEntity = pluginEntities.get(0);
-        assertEquals("id", pluginEntity.get("id"));
-        assertEquals("name", pluginEntity.get("name"));
-        assertEquals("1.0", pluginEntity.get("version"));
-        assertEquals(ApiType.ASYNC.getLabel(), pluginEntity.get("supportedApiType"));
-        ArrayList<String> arrayList = new ArrayList<>();
-        arrayList.add(ConnectorMode.SUBSCRIBE.getLabel());
-        assertEquals(arrayList, pluginEntity.get("supportedModes"));
+
+        assertThat(response.getStatus()).isEqualTo(HttpStatusCode.OK_200);
+        final List<Map<String, Object>> pluginEntities = response.readEntity(List.class);
+        assertThat(pluginEntities).hasSize(1);
+        Map<String, Object> pluginEntity = pluginEntities.get(0);
+        assertThat(pluginEntity)
+            .containsEntry("id", "id")
+            .containsEntry("name", "name")
+            .containsEntry("version", "1.0")
+            .containsEntry("supportedApiType", ApiType.ASYNC.getLabel())
+            .containsEntry("supportedModes", List.of(ConnectorMode.SUBSCRIBE.getLabel()));
     }
 
     @Test
@@ -85,23 +86,57 @@ public class EndpointsResourceTest extends AbstractResourceTest {
         connectorPlugin.setSupportedApiType(ApiType.ASYNC);
         connectorPlugin.setSupportedModes(Set.of(ConnectorMode.SUBSCRIBE));
         when(endpointConnectorPluginService.findAll()).thenReturn(Set.of(connectorPlugin));
-        when(endpointConnectorPluginService.getSchema(connectorPlugin.getId())).thenReturn("schema");
-        when(endpointConnectorPluginService.getIcon(connectorPlugin.getId())).thenReturn("icon");
+        when(endpointConnectorPluginService.getSchema(connectorPlugin.getId())).thenReturn("schemaResponse");
+        when(endpointConnectorPluginService.getIcon(connectorPlugin.getId())).thenReturn("iconResponse");
 
         final Response response = envTarget().queryParam("expand", "schema").queryParam("expand", "icon").request().get();
-        assertEquals(HttpStatusCode.OK_200, response.getStatus());
-        final List<Map<String, String>> pluginEntities = response.readEntity(List.class);
-        assertEquals(1, pluginEntities.size());
-        Map<String, String> pluginEntity = pluginEntities.get(0);
-        assertEquals("id", pluginEntity.get("id"));
-        assertEquals("name", pluginEntity.get("name"));
-        assertEquals("1.0", pluginEntity.get("version"));
-        assertEquals(ApiType.ASYNC.getLabel(), pluginEntity.get("supportedApiType"));
-        ArrayList<String> arrayList = new ArrayList<>();
-        arrayList.add(ConnectorMode.SUBSCRIBE.getLabel());
-        assertEquals(arrayList, pluginEntity.get("supportedModes"));
-        assertEquals("schema", pluginEntity.get("schema"));
-        assertEquals("icon", pluginEntity.get("icon"));
+        assertThat(response.getStatus()).isEqualTo(HttpStatusCode.OK_200);
+        final List<Map<String, Object>> pluginEntities = response.readEntity(List.class);
+        assertThat(pluginEntities).hasSize(1);
+        Map<String, Object> pluginEntity = pluginEntities.get(0);
+        assertThat(pluginEntity)
+            .containsEntry("id", "id")
+            .containsEntry("name", "name")
+            .containsEntry("version", "1.0")
+            .containsEntry("supportedApiType", ApiType.ASYNC.getLabel())
+            .containsEntry("supportedModes", List.of(ConnectorMode.SUBSCRIBE.getLabel()))
+            .containsEntry("schema", "schemaResponse")
+            .containsEntry("icon", "iconResponse");
+    }
+
+    @Test
+    public void shouldReturnAllEndpointsWithSchemaAndEndpointGroupSchema() {
+        ConnectorPluginEntity connectorPlugin = new ConnectorPluginEntity();
+        connectorPlugin.setId("id");
+        connectorPlugin.setName("name");
+        connectorPlugin.setVersion("1.0");
+        connectorPlugin.setSupportedApiType(ApiType.ASYNC);
+        connectorPlugin.setSupportedModes(Set.of(ConnectorMode.SUBSCRIBE));
+        when(endpointConnectorPluginService.findAll()).thenReturn(Set.of(connectorPlugin));
+        when(endpointConnectorPluginService.getSchema(connectorPlugin.getId())).thenReturn("schemaResponse");
+        when(endpointConnectorPluginService.getIcon(connectorPlugin.getId())).thenReturn("iconResponse");
+        when(endpointConnectorPluginService.getEndpointGroupSchema(connectorPlugin.getId())).thenReturn("endpointGroupSchemaResponse");
+
+        final Response response = envTarget()
+            .queryParam("expand", "schema")
+            .queryParam("expand", "endpointGroupSchema")
+            .queryParam("expand", "icon")
+            .request()
+            .get();
+
+        assertThat(response.getStatus()).isEqualTo(HttpStatusCode.OK_200);
+        final List<Map<String, Object>> pluginEntities = response.readEntity(List.class);
+        assertThat(pluginEntities).hasSize(1);
+        Map<String, Object> pluginEntity = pluginEntities.get(0);
+        assertThat(pluginEntity)
+            .containsEntry("id", "id")
+            .containsEntry("name", "name")
+            .containsEntry("version", "1.0")
+            .containsEntry("supportedApiType", ApiType.ASYNC.getLabel())
+            .containsEntry("supportedModes", List.of(ConnectorMode.SUBSCRIBE.getLabel()))
+            .containsEntry("schema", "schemaResponse")
+            .containsEntry("icon", "iconResponse")
+            .containsEntry("endpointGroupSchema", "endpointGroupSchemaResponse");
     }
 
     @Test

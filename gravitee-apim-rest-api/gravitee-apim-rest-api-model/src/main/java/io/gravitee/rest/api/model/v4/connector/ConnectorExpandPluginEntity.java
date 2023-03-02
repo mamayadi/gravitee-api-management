@@ -37,4 +37,5 @@ public class ConnectorExpandPluginEntity extends ConnectorPluginEntity {
     private String schema;
     private String icon;
     private String subscriptionSchema;
+    private String endpointGroupSchema;
 }
