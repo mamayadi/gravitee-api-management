@@ -43,6 +43,7 @@ import io.gravitee.gateway.jupiter.api.message.Message;
 import io.gravitee.gateway.jupiter.api.qos.Qos;
 import io.gravitee.gateway.jupiter.api.qos.QosCapability;
 import io.gravitee.plugin.endpoint.mqtt5.configuration.Mqtt5EndpointConnectorConfiguration;
+import io.gravitee.plugin.endpoint.mqtt5.configuration.Mqtt5EndpointConnectorEndpointGroupConfiguration;
 import io.reactivex.Maybe;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
@@ -75,6 +76,7 @@ public class Mqtt5EndpointConnector extends EndpointAsyncConnector {
     private static final String FAILURE_PARAMETERS_EXCEPTION = "exception";
     private static final String ENDPOINT_ID = "mqtt5";
     private final Mqtt5EndpointConnectorConfiguration configuration;
+    private final Mqtt5EndpointConnectorEndpointGroupConfiguration groupConfiguration;
 
     @Override
     public String id() {
@@ -100,6 +102,10 @@ public class Mqtt5EndpointConnector extends EndpointAsyncConnector {
         return configuration;
     }
 
+    protected Mqtt5EndpointConnectorEndpointGroupConfiguration groupConfiguration() {
+        return groupConfiguration;
+    }
+
     @Override
     public Completable connect(final ExecutionContext ctx) {
         return Completable
@@ -122,7 +128,7 @@ public class Mqtt5EndpointConnector extends EndpointAsyncConnector {
     public Completable subscribe(ExecutionContext ctx) {
         return Completable.fromRunnable(
             () -> {
-                if (configuration.getConsumer().isEnabled()) {
+                if (groupConfiguration.getConsumer().isEnabled()) {
                     ctx
                         .response()
                         .messages(
@@ -171,7 +177,7 @@ public class Mqtt5EndpointConnector extends EndpointAsyncConnector {
 
     @Override
     public Completable publish(ExecutionContext ctx) {
-        if (configuration.getProducer().isEnabled()) {
+        if (groupConfiguration.getProducer().isEnabled()) {
             return Completable.defer(
                 () -> {
                     Mqtt5RxClient mqtt5RxClient = ctx.getInternalAttribute(INTERNAL_CONTEXT_ATTRIBUTE_MQTT_CLIENT);
@@ -224,7 +230,7 @@ public class Mqtt5EndpointConnector extends EndpointAsyncConnector {
             .automaticReconnectWithDefaultConfig()
             .addDisconnectedListener(
                 context -> {
-                    if (context.getReconnector().getAttempts() >= configuration().getReconnectAttempts()) {
+                    if (context.getReconnector().getAttempts() >= groupConfiguration().getReconnectAttempts()) {
                         context.getReconnector().reconnect(false);
                     }
                 }
@@ -259,7 +265,7 @@ public class Mqtt5EndpointConnector extends EndpointAsyncConnector {
             .builder()
             .topic(overrideConfigFromMessage(topic, message, CONTEXT_ATTRIBUTE_MQTT5_TOPIC))
             .responseTopic(overrideConfigFromMessage(responseTopic, message, CONTEXT_ATTRIBUTE_MQTT5_RESPONSE_TOPIC))
-            .retain(configuration.getProducer().isRetained())
+            .retain(groupConfiguration.getProducer().isRetained())
             .qos(Mqtt5Publish.DEFAULT_QOS)
             .payload(message.content().getBytes())
             .noMessageExpiry();
@@ -276,7 +282,7 @@ public class Mqtt5EndpointConnector extends EndpointAsyncConnector {
     private String getTopic(final ExecutionContext ctx) {
         String topic = ctx.getAttribute(CONTEXT_ATTRIBUTE_MQTT5_TOPIC);
         if (topic == null || topic.isEmpty()) {
-            topic = configuration.getTopic();
+            topic = groupConfiguration.getTopic();
             ctx.setAttribute(CONTEXT_ATTRIBUTE_MQTT5_TOPIC, topic);
         }
         if (topic == null) {
@@ -288,7 +294,7 @@ public class Mqtt5EndpointConnector extends EndpointAsyncConnector {
     private String getResponseTopic(final ExecutionContext ctx) {
         String responseTopic = ctx.getAttribute(CONTEXT_ATTRIBUTE_MQTT5_RESPONSE_TOPIC);
         if (responseTopic == null || responseTopic.isEmpty()) {
-            responseTopic = configuration.getProducer().getResponseTopic();
+            responseTopic = groupConfiguration.getProducer().getResponseTopic();
             if (responseTopic == null || responseTopic.isEmpty()) {
                 ctx.setAttribute(CONTEXT_ATTRIBUTE_MQTT5_RESPONSE_TOPIC, responseTopic);
             }

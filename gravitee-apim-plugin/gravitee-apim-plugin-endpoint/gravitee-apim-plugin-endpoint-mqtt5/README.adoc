@@ -17,7 +17,7 @@ This is an _OSS_ edition for MQTT 5.x endpoint which allow subscribing or publis
 |===
 |Plugin version | APIM version
 
-|1.x and upper                  | 3.20.x to latest
+|1.x and upper                  | 3.21.x to latest
 |===
 
 == Endpoint identifier
@@ -27,12 +27,26 @@ In order to use this _OSS_ version, you have to declare the following identifier
 == Endpoint configuration
 
 === General configuration
+
+==== Endpoint level configuration
+
 |===
 |Attributes | Default | Mandatory | Description
 
-|identifier | N/A     | No | The client identifier identifies the MQTT client that connects to an MQTT broker.
 |serverHost | N/A     | Yes | Define the host of the MQTT broker.
 |serverPort | N/A     | Yes | Define the port of the MQTT broker.
+|===
+
+==== Group level configuration
+
+Group level configuration can be done directly from the endpoint group `sharedConfiguration` field.
+
+If `inheritConfiguration` is false, then group level configuration can be overridden directly from endpoint `groupConfiguration` field.
+
+|===
+|Attributes | Default | Mandatory | Description
+
+|reconnectAttempts | N/A     | No | The number of attempt to reconnect to the broker.
 |topic | N/A     | Yes | Refers to an UTF-8 string that the broker uses to filter messages for each connected client.
 |===
 

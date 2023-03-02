@@ -43,6 +43,7 @@ import io.gravitee.gateway.jupiter.api.message.DefaultMessage;
 import io.gravitee.gateway.jupiter.api.message.Message;
 import io.gravitee.gateway.jupiter.core.context.interruption.InterruptionFailureException;
 import io.gravitee.plugin.endpoint.mqtt5.configuration.Mqtt5EndpointConnectorConfiguration;
+import io.gravitee.plugin.endpoint.mqtt5.configuration.Mqtt5EndpointConnectorEndpointGroupConfiguration;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.FlowableTransformer;
 import io.reactivex.rxjava3.observers.TestObserver;
@@ -78,6 +79,7 @@ class Mqtt5EndpointConnectorTest {
     private static final HiveMQContainer mqtt = new HiveMQContainer(DockerImageName.parse("hivemq/hivemq-ce:latest"));
 
     private final Mqtt5EndpointConnectorConfiguration configuration = new Mqtt5EndpointConnectorConfiguration();
+    private final Mqtt5EndpointConnectorEndpointGroupConfiguration groupConfiguration = new Mqtt5EndpointConnectorEndpointGroupConfiguration();
 
     @Captor
     ArgumentCaptor<io.reactivex.rxjava3.core.Flowable<Message>> messagesConsumerCaptor;
@@ -103,10 +105,10 @@ class Mqtt5EndpointConnectorTest {
     public void test() {
         configuration.setServerHost(mqtt.getHost());
         configuration.setServerPort(mqtt.getMqttPort());
-        configuration.setTopic("test/topic");
-        configuration.getProducer().setRetained(true);
+        groupConfiguration.setTopic("test/topic");
+        groupConfiguration.getProducer().setRetained(true);
 
-        mqtt5EndpointConnector = new Mqtt5EndpointConnector(configuration);
+        mqtt5EndpointConnector = new Mqtt5EndpointConnector(configuration, groupConfiguration);
 
         lenient().when(ctx.response()).thenReturn(response);
         lenient().when(ctx.request()).thenReturn(request);
@@ -141,7 +143,7 @@ class Mqtt5EndpointConnectorTest {
 
     @Test
     void shouldConsumeMqttMessages() throws InterruptedException {
-        configuration.getProducer().setEnabled(false);
+        groupConfiguration.getProducer().setEnabled(false);
 
         TestObserver<Void> testObserver = mqtt5EndpointConnector.connect(ctx).test();
         testObserver.await(10, TimeUnit.SECONDS);
@@ -167,8 +169,8 @@ class Mqtt5EndpointConnectorTest {
                             io.reactivex.Flowable.just(
                                 Mqtt5Publish
                                     .builder()
-                                    .topic(configuration.getTopic())
-                                    .retain(configuration.getProducer().isRetained())
+                                    .topic(groupConfiguration.getTopic())
+                                    .retain(groupConfiguration.getProducer().isRetained())
                                     .qos(Mqtt5Publish.DEFAULT_QOS)
                                     .payload(Buffer.buffer("message").getBytes())
                                     .build()
@@ -200,7 +202,7 @@ class Mqtt5EndpointConnectorTest {
     void shouldInterruptConsumeWithInvalidHostAndPort() throws InterruptedException {
         configuration.setServerHost("localhost");
         configuration.setServerPort(1);
-        configuration.getProducer().setEnabled(false);
+        groupConfiguration.getProducer().setEnabled(false);
 
         when(ctx.interruptWith(any()))
             .thenAnswer(invocation -> Completable.error(new InterruptionFailureException(invocation.getArgument(0))));
@@ -221,7 +223,7 @@ class Mqtt5EndpointConnectorTest {
 
     @Test
     void shouldPublishRequestMessages() throws InterruptedException {
-        configuration.getConsumer().setEnabled(false);
+        groupConfiguration.getConsumer().setEnabled(false);
         when(request.onMessages(any())).thenReturn(Completable.complete());
 
         Mqtt5RxClient client = Mqtt5Client
@@ -238,13 +240,13 @@ class Mqtt5EndpointConnectorTest {
                     client
                         .subscribePublishesWith()
                         .addSubscription()
-                        .topicFilter(configuration.getTopic())
+                        .topicFilter(groupConfiguration.getTopic())
                         .qos(MqttQos.AT_LEAST_ONCE)
                         .noLocal(false)
                         .applySubscription()
                         .applySubscribe()
             )
-            .doFinally(() -> client.unsubscribeWith().topicFilter(configuration.getTopic()).applyUnsubscribe())
+            .doFinally(() -> client.unsubscribeWith().topicFilter(groupConfiguration.getTopic()).applyUnsubscribe())
             .take(1)
             .test();
 
@@ -268,7 +270,7 @@ class Mqtt5EndpointConnectorTest {
 
     @Test
     void shouldPublishRequestMessagesOnCtxOverriddenTopic() throws InterruptedException {
-        configuration.getConsumer().setEnabled(false);
+        groupConfiguration.getConsumer().setEnabled(false);
         when(request.onMessages(any())).thenReturn(Completable.complete());
         String overriddenTopic = "overriddenTopic";
 
@@ -292,7 +294,7 @@ class Mqtt5EndpointConnectorTest {
                         .applySubscription()
                         .applySubscribe()
             )
-            .doFinally(() -> client.unsubscribeWith().topicFilter(configuration.getTopic()).applyUnsubscribe())
+            .doFinally(() -> client.unsubscribeWith().topicFilter(groupConfiguration.getTopic()).applyUnsubscribe())
             .take(1)
             .test();
 
@@ -317,7 +319,7 @@ class Mqtt5EndpointConnectorTest {
 
     @Test
     void shouldPublishRequestMessagesOnMessageOverriddenTopic() throws InterruptedException {
-        configuration.getConsumer().setEnabled(false);
+        groupConfiguration.getConsumer().setEnabled(false);
         when(request.onMessages(any())).thenReturn(Completable.complete());
         String messageOverriddenTopic = "messageOverriddenTopic";
 
@@ -341,7 +343,7 @@ class Mqtt5EndpointConnectorTest {
                         .applySubscription()
                         .applySubscribe()
             )
-            .doFinally(() -> client.unsubscribeWith().topicFilter(configuration.getTopic()).applyUnsubscribe())
+            .doFinally(() -> client.unsubscribeWith().topicFilter(groupConfiguration.getTopic()).applyUnsubscribe())
             .take(1)
             .test();
 

@@ -1,18 +1,8 @@
 {
     "type": "object",
-    "id": "urn:jsonschema:io:gravitee:plugin:endpoint:mqtt:configuration:MqttEndpointConnectorConfiguration",
+    "id": "urn:jsonschema:io:gravitee:plugin:endpoint:mqtt:configuration:MqttEndpointConnectorEndpointGroupConfiguration",
     "additionalProperties": false,
     "properties": {
-        "serverHost": {
-            "type": "string",
-            "title": "Broker host",
-            "description": "Define the host of the MQTT broker."
-        },
-        "serverPort": {
-            "type": "integer",
-            "title": "Broker port",
-            "description": "Define the port of the MQTT broker."
-        },
         "topic": {
             "type": "string",
             "title": "Topic",
@@ -64,5 +54,5 @@
             }
         }
     },
-    "required": ["serverHost", "serverPort", "topic"]
+    "required": ["topic"]
 }

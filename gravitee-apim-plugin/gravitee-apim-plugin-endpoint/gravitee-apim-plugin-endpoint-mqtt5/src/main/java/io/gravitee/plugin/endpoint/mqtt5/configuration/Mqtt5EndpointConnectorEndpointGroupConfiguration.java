@@ -15,8 +15,9 @@
  */
 package io.gravitee.plugin.endpoint.mqtt5.configuration;
 
-import io.gravitee.gateway.jupiter.api.connector.endpoint.EndpointConnectorConfiguration;
+import io.gravitee.gateway.jupiter.api.connector.endpoint.EndpointConnectorEndpointGroupConfiguration;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -31,8 +32,43 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @Setter
 @SuperBuilder
-public class Mqtt5EndpointConnectorConfiguration implements EndpointConnectorConfiguration {
+public class Mqtt5EndpointConnectorEndpointGroupConfiguration implements EndpointConnectorEndpointGroupConfiguration {
 
-    private String serverHost;
-    private Integer serverPort;
+    private String topic;
+
+    @Builder.Default
+    private Integer reconnectAttempts = 3;
+
+    @Builder.Default
+    private Consumer consumer = new Consumer();
+
+    @Builder.Default
+    private Producer producer = new Producer();
+
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Getter
+    @Setter
+    @SuperBuilder
+    public static class Consumer {
+
+        @Builder.Default
+        private boolean enabled = true;
+    }
+
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Getter
+    @Setter
+    @SuperBuilder
+    public static class Producer {
+
+        @Builder.Default
+        private boolean enabled = true;
+
+        @Builder.Default
+        private boolean retained = false;
+
+        private String responseTopic;
+    }
 }
