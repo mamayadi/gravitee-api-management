@@ -34,6 +34,7 @@ import io.gravitee.gateway.jupiter.api.qos.Qos;
 import io.gravitee.gateway.jupiter.api.qos.QosCapability;
 import io.gravitee.gateway.jupiter.api.qos.QosRequirement;
 import io.gravitee.plugin.endpoint.kafka.configuration.KafkaEndpointConnectorConfiguration;
+import io.gravitee.plugin.endpoint.kafka.configuration.KafkaEndpointConnectorEndpointGroupConfiguration;
 import io.gravitee.plugin.endpoint.kafka.error.KafkaConnectionClosedException;
 import io.gravitee.plugin.endpoint.kafka.error.KafkaReceiverErrorTransformer;
 import io.gravitee.plugin.endpoint.kafka.error.KafkaSenderErrorTransformer;
@@ -90,6 +91,7 @@ public class KafkaEndpointConnector extends EndpointAsyncConnector {
     private static final String FAILURE_PARAMETERS_EXCEPTION = "exception";
     private static final String ENDPOINT_ID = "kafka";
     protected final KafkaEndpointConnectorConfiguration configuration;
+    protected final KafkaEndpointConnectorEndpointGroupConfiguration groupConfiguration;
     private final QosStrategyFactory qosStrategyFactory;
 
     private final KafkaReceiverFactory kafkaReceiverFactory = new KafkaReceiverFactory();
@@ -117,7 +119,7 @@ public class KafkaEndpointConnector extends EndpointAsyncConnector {
 
     @Override
     public Completable publish(final ExecutionContext ctx) {
-        if (configuration.getProducer().isEnabled()) {
+        if (groupConfiguration.getProducer().isEnabled()) {
             return Completable.defer(
                 () -> {
                     Map<String, Object> config = new HashMap<>();
@@ -189,7 +191,7 @@ public class KafkaEndpointConnector extends EndpointAsyncConnector {
     public Completable subscribe(final ExecutionContext ctx) {
         return Completable.fromRunnable(
             () -> {
-                if (configuration.getConsumer().isEnabled()) {
+                if (groupConfiguration.getConsumer().isEnabled()) {
                     ctx
                         .response()
                         .messages(
@@ -207,7 +209,7 @@ public class KafkaEndpointConnector extends EndpointAsyncConnector {
                                     Map<String, Object> config = new HashMap<>();
                                     config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, configuration.getBootstrapServers());
                                     config.put(ConsumerConfig.RECONNECT_BACKOFF_MS_CONFIG, RECONNECT_BACKOFF_MS);
-                                    KafkaEndpointConnectorConfiguration.Consumer configurationConsumer = configuration.getConsumer();
+                                    KafkaEndpointConnectorEndpointGroupConfiguration.Consumer configurationConsumer = groupConfiguration.getConsumer();
                                     config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, configurationConsumer.getAutoOffsetReset());
 
                                     // Set kafka consumer properties
@@ -227,7 +229,7 @@ public class KafkaEndpointConnector extends EndpointAsyncConnector {
                                     return RxJava3Adapter
                                         .<Message>fluxToFlowable(
                                             qosStrategy
-                                                .receive(ctx, configuration, receiverOptions)
+                                                .receive(ctx, groupConfiguration, receiverOptions)
                                                 .transform(KafkaReceiverErrorTransformer.transform(qosStrategy))
                                                 .map(
                                                     consumerRecord -> {
@@ -329,7 +331,7 @@ public class KafkaEndpointConnector extends EndpointAsyncConnector {
     private Set<String> getTopics(final MessageExecutionContext ctx) {
         Set<String> topics = ctx.getAttribute(CONTEXT_ATTRIBUTE_KAFKA_TOPICS);
         if (topics == null || topics.isEmpty()) {
-            topics = configuration.getTopics();
+            topics = groupConfiguration.getTopics();
             ctx.setAttribute(CONTEXT_ATTRIBUTE_KAFKA_TOPICS, topics);
         }
         if (topics == null) {

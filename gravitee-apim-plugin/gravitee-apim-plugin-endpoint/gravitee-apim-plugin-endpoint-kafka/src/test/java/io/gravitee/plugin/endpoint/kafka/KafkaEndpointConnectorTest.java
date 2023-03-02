@@ -36,6 +36,7 @@ import io.gravitee.gateway.jupiter.api.message.Message;
 import io.gravitee.gateway.jupiter.api.qos.QosRequirement;
 import io.gravitee.gateway.jupiter.core.context.interruption.InterruptionFailureException;
 import io.gravitee.plugin.endpoint.kafka.configuration.KafkaEndpointConnectorConfiguration;
+import io.gravitee.plugin.endpoint.kafka.configuration.KafkaEndpointConnectorEndpointGroupConfiguration;
 import io.gravitee.plugin.endpoint.kafka.strategy.DefaultQosStrategyFactory;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
@@ -104,6 +105,7 @@ class KafkaEndpointConnectorTest {
     ArgumentCaptor<FlowableTransformer<Message, Message>> messagesTransformerCaptor;
 
     private KafkaEndpointConnectorConfiguration configuration;
+    private KafkaEndpointConnectorEndpointGroupConfiguration groupConfiguration;
     private KafkaEndpointConnector kafkaEndpointConnector;
     private String topicId;
 
@@ -123,9 +125,10 @@ class KafkaEndpointConnectorTest {
     public void beforeEach() throws ExecutionException, InterruptedException, TimeoutException {
         topicId = UUID.randomUUID().toString();
         configuration = new KafkaEndpointConnectorConfiguration();
+        groupConfiguration = new KafkaEndpointConnectorEndpointGroupConfiguration();
         configuration.setBootstrapServers(kafka.getBootstrapServers());
-        configuration.setTopics(Set.of(topicId));
-        kafkaEndpointConnector = new KafkaEndpointConnector(configuration, new DefaultQosStrategyFactory());
+        groupConfiguration.setTopics(Set.of(topicId));
+        kafkaEndpointConnector = new KafkaEndpointConnector(configuration, groupConfiguration, new DefaultQosStrategyFactory());
         lenient().when(ctx.response()).thenReturn(response);
         lenient().when(ctx.request()).thenReturn(request);
         lenient().when(entrypointAsyncConnector.supportedModes()).thenReturn(Set.of(ConnectorMode.SUBSCRIBE, ConnectorMode.PUBLISH));
@@ -157,7 +160,7 @@ class KafkaEndpointConnectorTest {
 
     @Test
     void shouldPublishRequestMessages() throws InterruptedException {
-        configuration.getConsumer().setEnabled(false);
+        groupConfiguration.getConsumer().setEnabled(false);
         when(request.onMessages(any())).thenReturn(Completable.complete());
 
         TestObserver<Void> testObserver = kafkaEndpointConnector.connect(ctx).test();
@@ -189,8 +192,8 @@ class KafkaEndpointConnectorTest {
 
     @Test
     void shouldConsumeKafkaMessagesWithDefaultQos() throws InterruptedException {
-        configuration.getProducer().setEnabled(false);
-        configuration.getConsumer().setAutoOffsetReset("earliest");
+        groupConfiguration.getProducer().setEnabled(false);
+        groupConfiguration.getConsumer().setAutoOffsetReset("earliest");
 
         TestObserver<Void> testObserver = kafkaEndpointConnector.connect(ctx).test();
         testObserver.await(10, TimeUnit.SECONDS);
@@ -234,8 +237,8 @@ class KafkaEndpointConnectorTest {
 
     @Test
     void shouldInterruptSubscribeWithInvalidConfiguration() {
-        configuration.getProducer().setEnabled(false);
-        configuration.getConsumer().setAutoOffsetReset("wrong");
+        groupConfiguration.getProducer().setEnabled(false);
+        groupConfiguration.getConsumer().setAutoOffsetReset("wrong");
 
         when(ctx.interruptMessagesWith(any()))
             .thenAnswer(invocation -> Flowable.defer(() -> Flowable.error(new InterruptionFailureException(invocation.getArgument(0)))));
@@ -261,7 +264,7 @@ class KafkaEndpointConnectorTest {
     @Test
     void shouldInterruptSubscribeWithInvalidBootstrap() throws InterruptedException {
         configuration.setBootstrapServers("localhost:1");
-        configuration.getProducer().setEnabled(false);
+        groupConfiguration.getProducer().setEnabled(false);
 
         when(ctx.interruptMessagesWith(any()))
             .thenAnswer(invocation -> Flowable.defer(() -> Flowable.error(new InterruptionFailureException(invocation.getArgument(0)))));
@@ -284,7 +287,7 @@ class KafkaEndpointConnectorTest {
 
     @Test
     void shouldInterruptPublishWithInvalidConfiguration() {
-        configuration.getConsumer().setEnabled(false);
+        groupConfiguration.getConsumer().setEnabled(false);
         configuration.setBootstrapServers("****");
 
         when(request.onMessages(any())).thenReturn(Completable.complete());
@@ -315,7 +318,7 @@ class KafkaEndpointConnectorTest {
     @Test
     void shouldInterruptPublishWithInvalidBootstrap() throws InterruptedException {
         configuration.setBootstrapServers("localhost:10");
-        configuration.getConsumer().setEnabled(false);
+        groupConfiguration.getConsumer().setEnabled(false);
         when(request.onMessages(any())).thenReturn(Completable.complete());
 
         when(ctx.interruptMessagesWith(any()))

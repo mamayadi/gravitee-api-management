@@ -16,7 +16,7 @@
 package io.gravitee.plugin.endpoint.kafka.strategy.impl;
 
 import io.gravitee.gateway.jupiter.api.context.ExecutionContext;
-import io.gravitee.plugin.endpoint.kafka.configuration.KafkaEndpointConnectorConfiguration;
+import io.gravitee.plugin.endpoint.kafka.configuration.KafkaEndpointConnectorEndpointGroupConfiguration;
 import io.gravitee.plugin.endpoint.kafka.factory.KafkaReceiverFactory;
 import java.time.Duration;
 import java.util.Map;
@@ -43,7 +43,7 @@ public class NoneStrategy<K, V> extends AbstractQosStrategy<K, V> {
     @Override
     public Flux<ConsumerRecord<K, V>> receive(
         final ExecutionContext executionContext,
-        final KafkaEndpointConnectorConfiguration configuration,
+        final KafkaEndpointConnectorEndpointGroupConfiguration groupConfiguration,
         final ReceiverOptions<K, V> receiverOptions
     ) {
         ReceiverOptions<K, V> noCommitReceiverOptions = receiverOptions.commitInterval(Duration.ZERO).commitBatchSize(0);
