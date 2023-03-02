@@ -35,6 +35,7 @@ import io.gravitee.gateway.jupiter.http.vertx.client.VertxHttpClient;
 import io.gravitee.node.api.configuration.Configuration;
 import io.gravitee.plugin.endpoint.http.proxy.client.VertxHttpClientHelper;
 import io.gravitee.plugin.endpoint.http.proxy.configuration.HttpProxyEndpointConnectorConfiguration;
+import io.gravitee.plugin.endpoint.http.proxy.configuration.HttpProxyEndpointConnectorEndpointGroupConfiguration;
 import io.reactivex.rxjava3.core.Completable;
 import io.vertx.core.MultiMap;
 import io.vertx.core.http.HttpMethod;
@@ -76,6 +77,7 @@ public class HttpProxyEndpointConnector extends EndpointSyncConnector {
     static final Set<ConnectorMode> SUPPORTED_MODES = Set.of(ConnectorMode.REQUEST_RESPONSE);
 
     protected final HttpProxyEndpointConnectorConfiguration configuration;
+    protected final HttpProxyEndpointConnectorEndpointGroupConfiguration groupConfiguration;
     private final AtomicBoolean httpClientCreated = new AtomicBoolean(false);
     private final String relativeTarget;
     private final String defaultHost;
@@ -84,8 +86,12 @@ public class HttpProxyEndpointConnector extends EndpointSyncConnector {
     private final MultiValueMap<String, String> targetParameters;
     private HttpClient httpClient;
 
-    public HttpProxyEndpointConnector(HttpProxyEndpointConnectorConfiguration configuration) {
+    public HttpProxyEndpointConnector(
+        HttpProxyEndpointConnectorConfiguration configuration,
+        HttpProxyEndpointConnectorEndpointGroupConfiguration groupConfiguration
+    ) {
         this.configuration = configuration;
+        this.groupConfiguration = groupConfiguration;
 
         final URL targetUrl = buildUrl(configuration.getTarget());
         this.relativeTarget = targetUrl.getPath();
@@ -181,7 +187,7 @@ public class HttpProxyEndpointConnector extends EndpointSyncConnector {
             requestHeaders.remove(HOST);
         }
 
-        if (!configuration.getHttpOptions().isPropagateClientAcceptEncoding()) {
+        if (!groupConfiguration.getHttpOptions().isPropagateClientAcceptEncoding()) {
             // Let the API owner choose the Accept-Encoding between the gateway and the backend.
             requestHeaders.remove(HttpHeaders.ACCEPT_ENCODING);
         }
@@ -189,7 +195,7 @@ public class HttpProxyEndpointConnector extends EndpointSyncConnector {
         prepareUriAndQueryParameters(ctx, requestOptions);
 
         // Override any request headers that are configured at endpoint level.
-        final List<HttpHeader> configHeaders = configuration.getHeaders();
+        final List<HttpHeader> configHeaders = groupConfiguration.getHeaders();
         if (configHeaders != null && !configHeaders.isEmpty()) {
             configHeaders.forEach(header -> requestHeaders.set(header.getName(), header.getValue()));
         }
@@ -205,8 +211,8 @@ public class HttpProxyEndpointConnector extends EndpointSyncConnector {
 
         return requestOptions
             .setMethod(HttpMethod.valueOf(request.method().name()))
-            .setTimeout(configuration.getHttpOptions().getReadTimeout())
-            .setFollowRedirects(configuration.getHttpOptions().isFollowRedirects());
+            .setTimeout(groupConfiguration.getHttpOptions().getReadTimeout())
+            .setFollowRedirects(groupConfiguration.getHttpOptions().isFollowRedirects());
     }
 
     private HttpClient getOrBuildHttpClient(ExecutionContext ctx) throws MalformedURLException {
@@ -218,7 +224,7 @@ public class HttpProxyEndpointConnector extends EndpointSyncConnector {
                         VertxHttpClientHelper.buildHttpClient(
                             ctx.getComponent(Vertx.class),
                             ctx.getComponent(Configuration.class),
-                            configuration,
+                            groupConfiguration,
                             configuration.getTarget()
                         );
                 }

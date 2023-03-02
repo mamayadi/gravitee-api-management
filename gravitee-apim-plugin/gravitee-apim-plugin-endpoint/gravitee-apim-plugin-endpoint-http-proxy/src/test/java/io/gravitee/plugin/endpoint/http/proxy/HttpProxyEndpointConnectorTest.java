@@ -47,6 +47,7 @@ import io.gravitee.gateway.jupiter.api.context.Request;
 import io.gravitee.gateway.jupiter.api.context.Response;
 import io.gravitee.plugin.endpoint.http.proxy.client.VertxHttpClientHelper;
 import io.gravitee.plugin.endpoint.http.proxy.configuration.HttpProxyEndpointConnectorConfiguration;
+import io.gravitee.plugin.endpoint.http.proxy.configuration.HttpProxyEndpointConnectorEndpointGroupConfiguration;
 import io.gravitee.reporter.api.v4.metric.Metrics;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.observers.TestObserver;
@@ -106,6 +107,7 @@ class HttpProxyEndpointConnectorTest {
     private HttpHeaders requestHeaders;
     private HttpHeaders responseHeaders;
     private HttpProxyEndpointConnectorConfiguration configuration;
+    private HttpProxyEndpointConnectorEndpointGroupConfiguration groupConfiguration;
     private HttpProxyEndpointConnector cut;
 
     private AtomicInteger httpClientCreationCount;
@@ -160,9 +162,10 @@ class HttpProxyEndpointConnectorTest {
         lenient().when(response.headers()).thenReturn(responseHeaders);
 
         configuration = new HttpProxyEndpointConnectorConfiguration();
+        groupConfiguration = new HttpProxyEndpointConnectorEndpointGroupConfiguration();
 
         configuration.setTarget("http://localhost:" + wiremock.port() + "/team");
-        cut = new HttpProxyEndpointConnector(configuration);
+        cut = new HttpProxyEndpointConnector(configuration, groupConfiguration);
     }
 
     @AfterEach
@@ -216,7 +219,7 @@ class HttpProxyEndpointConnectorTest {
         when(request.chunks()).thenReturn(Flowable.empty());
 
         configuration.setTarget("http://localhost:" + wiremock.port() + "/team?foo=bar");
-        cut = new HttpProxyEndpointConnector(configuration);
+        cut = new HttpProxyEndpointConnector(configuration, groupConfiguration);
 
         wiremock.stubFor(get(urlPathEqualTo("/team")).willReturn(ok(BACKEND_RESPONSE_BODY)));
 
@@ -422,7 +425,7 @@ class HttpProxyEndpointConnectorTest {
     void shouldAddOrReplaceRequestHeadersWithConfiguration() throws InterruptedException {
         when(request.method()).thenReturn(HttpMethod.GET);
         when(request.chunks()).thenReturn(Flowable.empty());
-        configuration.setHeaders(List.of(new HttpHeader("X-To-Be-Overriden", "Override"), new HttpHeader("X-To-Be-Added", "Added")));
+        groupConfiguration.setHeaders(List.of(new HttpHeader("X-To-Be-Overriden", "Override"), new HttpHeader("X-To-Be-Added", "Added")));
 
         requestHeaders.add("X-Custom", "value1");
         requestHeaders.add("X-To-Be-Overriden", List.of("toOverrideValue1", "toOverrideValue2"));
@@ -594,7 +597,7 @@ class HttpProxyEndpointConnectorTest {
     void shouldThrowIllegalArgumentExceptionWithNullTarget() {
         configuration.setTarget(null);
 
-        assertThrows(IllegalArgumentException.class, () -> cut = new HttpProxyEndpointConnector(configuration));
+        assertThrows(IllegalArgumentException.class, () -> cut = new HttpProxyEndpointConnector(configuration, groupConfiguration));
     }
 
     @Test
@@ -633,7 +636,7 @@ class HttpProxyEndpointConnectorTest {
         when(request.parameters()).thenReturn(parameters);
 
         configuration.setTarget("http://localhost:" + wiremock.port() + "/team?param1=value1&param2=value2");
-        cut = new HttpProxyEndpointConnector(configuration);
+        cut = new HttpProxyEndpointConnector(configuration, groupConfiguration);
 
         wiremock.stubFor(get(urlPathEqualTo("/team")).willReturn(ok(BACKEND_RESPONSE_BODY)));
 
@@ -656,7 +659,7 @@ class HttpProxyEndpointConnectorTest {
     void shouldErrorWhenExceptionIsThrown() {
         configuration.setTarget("http://localhost:" + wiremock.port() + "/team");
 
-        cut = new HttpProxyEndpointConnector(configuration);
+        cut = new HttpProxyEndpointConnector(configuration, groupConfiguration);
 
         final TestObserver<Void> obs = cut.connect(ctx).test();
         obs.assertError(NullPointerException.class);

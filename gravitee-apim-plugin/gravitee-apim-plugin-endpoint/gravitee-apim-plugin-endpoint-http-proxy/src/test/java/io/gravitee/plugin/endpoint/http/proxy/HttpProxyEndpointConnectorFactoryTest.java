@@ -20,6 +20,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.gravitee.definition.model.v4.http.HttpClientOptions;
 import io.gravitee.el.TemplateEngine;
 import io.gravitee.gateway.jupiter.api.ApiType;
 import io.gravitee.gateway.jupiter.api.ConnectorMode;
@@ -68,13 +69,20 @@ class HttpProxyEndpointConnectorFactoryTest {
     @ParameterizedTest
     @ValueSource(strings = { "wrong", "", "  ", "{\"unknown-key\":\"value\"}" })
     void shouldNotCreateConnectorWithWrongConfiguration(String configuration) {
-        HttpProxyEndpointConnector connector = cut.createConnector(deploymentContext, configuration);
+        HttpProxyEndpointConnector connector = cut.createConnector(deploymentContext, configuration, GROUP_CONFIG);
+        assertThat(connector).isNull();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "wrong", "", "  ", "{\"unknown-key\":\"value\"}" })
+    void shouldNotCreateConnectorWithWrongGroupConfiguration(String groupConfiguration) {
+        HttpProxyEndpointConnector connector = cut.createConnector(deploymentContext, CONFIG, groupConfiguration);
         assertThat(connector).isNull();
     }
 
     @Test
     void shouldCreateConnectorWithRightConfiguration() {
-        HttpProxyEndpointConnector connector = cut.createConnector(deploymentContext, CONFIG);
+        HttpProxyEndpointConnector connector = cut.createConnector(deploymentContext, CONFIG, GROUP_CONFIG);
         assertThat(connector).isNotNull();
         assertThat(connector.configuration).isNotNull();
         verify(templateEngine).convert("https://localhost:8082/echo?foo=bar");
@@ -87,11 +95,28 @@ class HttpProxyEndpointConnectorFactoryTest {
 
     @Test
     void shouldNotCreateConnectorWithNullConfiguration() {
-        HttpProxyEndpointConnector connector = cut.createConnector(deploymentContext, null);
+        HttpProxyEndpointConnector connector = cut.createConnector(deploymentContext, null, null);
         assertThat(connector).isNull();
     }
 
-    static final String CONFIG =
+    @Test
+    void shouldNotCreateConnectorWithMinimalConfiguration() {
+        HttpProxyEndpointConnector connector = cut.createConnector(
+            deploymentContext,
+            "{\"target\": \"https://localhost:8082/echo?foo=bar\"}",
+            null
+        );
+        assertThat(connector).isNotNull();
+        assertThat(connector.configuration.getTarget()).isEqualTo("https://localhost:8082/echo?foo=bar");
+        assertThat(connector.groupConfiguration.getHeaders()).isNull();
+        assertThat(connector.groupConfiguration.getHttpOptions()).isNotNull().usingRecursiveComparison().isEqualTo(new HttpClientOptions());
+        assertThat(connector.groupConfiguration.getProxyOptions()).isNull();
+        assertThat(connector.groupConfiguration.getSslOptions()).isNull();
+    }
+
+    static final String CONFIG = "{\n" + "  \"target\": \"https://localhost:8082/echo?foo=bar\"\n" + "}";
+
+    static final String GROUP_CONFIG =
         "{\n" +
         "       \"http\": {\n" +
         "           \"keepAlive\": true,\n" +
@@ -138,7 +163,6 @@ class HttpProxyEndpointConnectorFactoryTest {
         "               \"password\": \"truststore-secret\"\n" +
         "           },\n" +
         "           \"trustAll\": false\n" +
-        "       },\n" +
-        "       \"target\": \"https://localhost:8082/echo?foo=bar\"\n" +
+        "       }\n" +
         "}";
 }

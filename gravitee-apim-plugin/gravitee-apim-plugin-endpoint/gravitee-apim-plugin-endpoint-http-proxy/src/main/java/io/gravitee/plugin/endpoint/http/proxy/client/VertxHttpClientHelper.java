@@ -18,7 +18,7 @@ package io.gravitee.plugin.endpoint.http.proxy.client;
 import io.gravitee.common.util.MultiValueMap;
 import io.gravitee.gateway.jupiter.http.vertx.client.VertxHttpClient;
 import io.gravitee.node.api.configuration.Configuration;
-import io.gravitee.plugin.endpoint.http.proxy.configuration.HttpProxyEndpointConnectorConfiguration;
+import io.gravitee.plugin.endpoint.http.proxy.configuration.HttpProxyEndpointConnectorEndpointGroupConfiguration;
 import io.vertx.core.http.RequestOptions;
 import io.vertx.rxjava3.core.Vertx;
 import io.vertx.rxjava3.core.http.HttpClient;
@@ -45,7 +45,7 @@ public class VertxHttpClientHelper {
     public static HttpClient buildHttpClient(
         final Vertx vertx,
         final Configuration nodeConfiguration,
-        final HttpProxyEndpointConnectorConfiguration configuration,
+        final HttpProxyEndpointConnectorEndpointGroupConfiguration groupConfiguration,
         final String defaultTarget
     ) {
         return VertxHttpClient
@@ -53,9 +53,9 @@ public class VertxHttpClientHelper {
             .vertx(vertx)
             .nodeConfiguration(nodeConfiguration)
             .defaultTarget(defaultTarget)
-            .httpOptions(configuration.getHttpOptions())
-            .sslOptions(configuration.getSslOptions())
-            .proxyOptions(configuration.getProxyOptions())
+            .httpOptions(groupConfiguration.getHttpOptions())
+            .sslOptions(groupConfiguration.getSslOptions())
+            .proxyOptions(groupConfiguration.getProxyOptions())
             .build()
             .createHttpClient();
     }

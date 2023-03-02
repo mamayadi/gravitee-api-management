@@ -24,13 +24,10 @@ import io.gravitee.definition.model.v4.http.HttpProxyOptions;
 import io.gravitee.definition.model.v4.ssl.SslOptions;
 import io.gravitee.gateway.jupiter.http.vertx.client.VertxHttpClient;
 import io.gravitee.node.api.configuration.Configuration;
-import io.gravitee.plugin.endpoint.http.proxy.configuration.HttpProxyEndpointConnectorConfiguration;
+import io.gravitee.plugin.endpoint.http.proxy.configuration.HttpProxyEndpointConnectorEndpointGroupConfiguration;
 import io.vertx.core.http.RequestOptions;
 import io.vertx.rxjava3.core.Vertx;
-import java.util.ArrayList;
 import java.util.List;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -55,16 +52,16 @@ class VertxHttpClientHelperTest {
         try (MockedStatic<VertxHttpClient> vertxHttpClientMockedStatic = Mockito.mockStatic(VertxHttpClient.class)) {
             vertxHttpClientMockedStatic.when(VertxHttpClient::builder).thenReturn(vertxHttpClientBuilder);
 
-            final HttpProxyEndpointConnectorConfiguration configuration = new HttpProxyEndpointConnectorConfiguration();
+            final HttpProxyEndpointConnectorEndpointGroupConfiguration groupConfiguration = new HttpProxyEndpointConnectorEndpointGroupConfiguration();
             final Vertx vertx = mock(Vertx.class);
             final Configuration nodeConfiguration = mock(Configuration.class);
             final HttpClientOptions httpOptions = new HttpClientOptions();
             final SslOptions sslOptions = new SslOptions();
             final HttpProxyOptions proxyOptions = new HttpProxyOptions();
 
-            configuration.setHttpOptions(httpOptions);
-            configuration.setSslOptions(sslOptions);
-            configuration.setProxyOptions(proxyOptions);
+            groupConfiguration.setHttpOptions(httpOptions);
+            groupConfiguration.setSslOptions(sslOptions);
+            groupConfiguration.setProxyOptions(proxyOptions);
 
             when(vertxHttpClientBuilder.vertx(vertx)).thenReturn(vertxHttpClientBuilder);
             when(vertxHttpClientBuilder.nodeConfiguration(nodeConfiguration)).thenReturn(vertxHttpClientBuilder);
@@ -75,7 +72,7 @@ class VertxHttpClientHelperTest {
 
             final VertxHttpClient vertxHttpClient = mock(VertxHttpClient.class);
             when(vertxHttpClientBuilder.build()).thenReturn(vertxHttpClient);
-            VertxHttpClientHelper.buildHttpClient(vertx, nodeConfiguration, configuration, DEFAULT_TARGET);
+            VertxHttpClientHelper.buildHttpClient(vertx, nodeConfiguration, groupConfiguration, DEFAULT_TARGET);
 
             verify(vertxHttpClient).createHttpClient();
         }
