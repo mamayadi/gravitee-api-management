@@ -487,6 +487,22 @@ paths:
                                 type: string
                 default:
                     $ref: "#/components/responses/Error"
+    /endpoints/{endpointId}/endpointGroupConfiguration:
+        parameters:
+            - $ref: "#/components/parameters/endpointIdParam"
+        get:
+            tags:
+                - Connectors
+                - Endpoints
+            summary: Get an endpoint group configuration schema
+            description: |
+                # FIXME add a description
+            operationId: getEndpointGroupSchema
+            responses:
+                "200":
+                    $ref: "#/components/responses/SchemaFormResponse"
+                default:
+                    $ref: "#/components/responses/Error"
 
     /entrypoints:
         get:
