@@ -22,6 +22,8 @@ import io.gravitee.definition.model.v4.endpointgroup.EndpointGroup;
 import io.gravitee.definition.model.v4.endpointgroup.service.EndpointGroupServices;
 import io.gravitee.definition.model.v4.endpointgroup.service.EndpointServices;
 import io.gravitee.definition.model.v4.service.Service;
+import io.gravitee.rest.api.model.v4.connector.ConnectorPluginEntity;
+import io.gravitee.rest.api.service.exceptions.EndpointConfigurationValidationException;
 import io.gravitee.rest.api.service.exceptions.EndpointMissingException;
 import io.gravitee.rest.api.service.exceptions.EndpointNameInvalidException;
 import io.gravitee.rest.api.service.exceptions.HealthcheckInheritanceException;
@@ -75,6 +77,12 @@ public class EndpointGroupsValidationServiceImpl extends TransactionalService im
                 validateEndpointGroupType(endpointGroup.getType());
                 validateServices(endpointGroup.getServices());
                 validateEndpointsExistence(endpointGroup);
+                final ConnectorPluginEntity endpointConnector = endpointService.findById(endpointGroup.getType());
+                if (endpointGroup.getSharedConfiguration() != null) {
+                    endpointGroup.setSharedConfiguration(
+                        endpointService.validateEndpointGroupConfiguration(endpointConnector, endpointGroup.getSharedConfiguration())
+                    );
+                }
                 if (endpointGroup.getEndpoints() != null && !endpointGroups.isEmpty()) {
                     endpointGroup
                         .getEndpoints()
@@ -84,10 +92,9 @@ public class EndpointGroupsValidationServiceImpl extends TransactionalService im
                                 validateEndpointType(endpoint.getType());
                                 validateServices(endpointGroup.getServices(), endpoint.getServices());
                                 validateEndpointMatchType(endpointGroup, endpoint);
-
-                                endpoint.setConfiguration(
-                                    endpointService.validateConnectorConfiguration(endpoint.getType(), endpoint.getConfiguration())
-                                );
+                                validateEndpointConfiguration(endpointConnector, endpoint);
+                                validateSharedConfigurationInheritance(endpointGroup, endpoint);
+                                validateEndpointGroupConfigurationOverriding(endpointConnector, endpoint);
                             }
                         );
                 }
@@ -95,6 +102,33 @@ public class EndpointGroupsValidationServiceImpl extends TransactionalService im
         );
 
         return endpointGroups;
+    }
+
+    private void validateEndpointConfiguration(ConnectorPluginEntity endpointConnector, Endpoint endpoint) {
+        endpoint.setConfiguration(endpointService.validateConnectorConfiguration(endpointConnector, endpoint.getConfiguration()));
+    }
+
+    private void validateEndpointGroupConfigurationOverriding(ConnectorPluginEntity endpointConnector, Endpoint endpoint) {
+        if (!endpoint.isInheritConfiguration()) {
+            if (endpoint.getGroupConfiguration() == null) {
+                // If no endpoint group provided, validate with an empty object to validates required fields
+                endpointService.validateEndpointGroupConfiguration(endpointConnector, "{}");
+            } else {
+                endpoint.setGroupConfiguration(
+                    endpointService.validateEndpointGroupConfiguration(endpointConnector, endpoint.getGroupConfiguration())
+                );
+            }
+        }
+    }
+
+    private void validateSharedConfigurationInheritance(EndpointGroup endpointGroup, Endpoint endpoint) {
+        if (endpoint.isInheritConfiguration() && endpointGroup.getSharedConfiguration() == null) {
+            // If we try to inherit shared configuration that is null
+            // Shared configuration has already been validated so no need to do it again
+            throw new EndpointConfigurationValidationException(
+                "Impossible to inherit from a null shared configuration for endpoint: " + endpoint.getName()
+            );
+        }
     }
 
     private void validateEndpointsExistence(EndpointGroup endpointGroup) {
