@@ -63,6 +63,10 @@ public class Endpoint implements Serializable {
     @JsonRawValue
     private String configuration;
 
+    @Schema(implementation = Object.class)
+    @JsonRawValue
+    private String groupConfiguration;
+
     private EndpointServices services = new EndpointServices();
 
     @JsonSetter
@@ -74,5 +78,16 @@ public class Endpoint implements Serializable {
 
     public void setConfiguration(final String configuration) {
         this.configuration = configuration;
+    }
+
+    @JsonSetter
+    public void setGroupConfiguration(final JsonNode groupConfiguration) {
+        if (groupConfiguration != null) {
+            this.groupConfiguration = groupConfiguration.toString();
+        }
+    }
+
+    public void setGroupConfiguration(final String groupConfiguration) {
+        this.groupConfiguration = groupConfiguration;
     }
 }
