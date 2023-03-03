@@ -316,7 +316,7 @@ class DefaultEndpointManagerTest {
 
     @Test
     void shouldReturnNextManagedEndpointWhenEndpointByNameAvailableAgain() throws Exception {
-        final Api api = buildApi();
+        final Api api = buildApi(() -> buildEndpointGroup(this::buildEndpointUseOverriddenGroupConfiguration));
 
         final EndpointGroup expectedEndpointGroup = api.getEndpointGroups().get(1);
         final Endpoint expectedEndpoint = expectedEndpointGroup.getEndpoints().get(1);
@@ -324,7 +324,7 @@ class DefaultEndpointManagerTest {
         final EndpointConnector connector = mock(EndpointConnector.class);
         final EndpointCriteria criteria = new EndpointCriteria(endpointName, null, null);
 
-        when(connectorFactory.createConnector(deploymentContext, ENDPOINT_CONFIG)).thenReturn(connector);
+        when(connectorFactory.createConnector(deploymentContext, ENDPOINT_CONFIG, ENDPOINT_GROUP_CONFIG)).thenReturn(connector);
 
         final DefaultEndpointManager cut = new DefaultEndpointManager(api, pluginManager, deploymentContext);
         cut.start();
