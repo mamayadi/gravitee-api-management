@@ -28,7 +28,7 @@ import { Step2Entrypoints1ListHarness } from './steps/step-2-entrypoints/step-2-
 import { ApiCreationV4Module } from './api-creation-v4.module';
 import { Step6SummaryHarness } from './steps/step-6-summary/step-6-summary.harness';
 import { Step3EndpointListHarness } from './steps/step-3-endpoints/step-3-endpoints-1-list.harness';
-import { Step4SecurityHarness } from './steps/step-4-security/step-4-security.harness';
+import { Step4Security1PlansListHarness } from './steps/step-4-security/step-4-security-1-plans-list.harness';
 import { Step5DocumentationHarness } from './steps/step-5-documentation/step-5-documentation.harness';
 import { Step2Entrypoints2ConfigComponent } from './steps/step-2-entrypoints/step-2-entrypoints-2-config.component';
 import { Step2Entrypoints2ConfigHarness } from './steps/step-2-entrypoints/step-2-entrypoints-2-config.harness';
@@ -1019,7 +1019,7 @@ describe('ApiCreationV4Component', () => {
   }
 
   async function fillAndValidateStep4Security() {
-    const step4 = await harnessLoader.getHarness(Step4SecurityHarness);
+    const step4 = await harnessLoader.getHarness(Step4Security1PlansListHarness);
     await step4.fillAndValidate();
   }
 

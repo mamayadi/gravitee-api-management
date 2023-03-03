@@ -23,11 +23,11 @@ import { ApiCreationStepService } from '../../services/api-creation-step.service
 import { Step5DocumentationComponent } from '../step-5-documentation/step-5-documentation.component';
 
 @Component({
-  selector: 'step-4-security',
-  template: require('./step-4-security.component.html'),
-  styles: [require('./step-4-security.component.scss'), require('../api-creation-steps-common.component.scss')],
+  selector: 'step-4-security-1-plans-list',
+  template: require('./step-4-security-1-plans-list.component.html'),
+  styles: [require('./step-4-security-1-plans-list.component.scss'), require('../api-creation-steps-common.component.scss')],
 })
-export class Step4SecurityComponent implements OnInit {
+export class Step4Security1PlansListComponent implements OnInit {
   public form = new FormGroup({});
 
   constructor(@Inject(UIRouterState) readonly ajsState: StateService, private readonly stepService: ApiCreationStepService) {}
