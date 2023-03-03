@@ -55,8 +55,8 @@ public class Mqtt5EndpointConnectorFactory implements EndpointAsyncConnectorFact
     ) {
         try {
             return new Mqtt5EndpointConnector(
-                   pluginConfigurationHelper.readConfiguration(Mqtt5EndpointConnectorConfiguration.class, configuration),
-                   pluginConfigurationHelper.readConfiguration(Mqtt5EndpointConnectorEndpointGroupConfiguration.class, groupConfiguration)
+                pluginConfigurationHelper.readConfiguration(Mqtt5EndpointConnectorConfiguration.class, configuration),
+                pluginConfigurationHelper.readConfiguration(Mqtt5EndpointConnectorEndpointGroupConfiguration.class, groupConfiguration)
             );
         } catch (PluginConfigurationException e) {
             log.error("Can't create connector cause no valid configuration", e);

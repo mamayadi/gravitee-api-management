@@ -16,9 +16,9 @@
 package io.gravitee.rest.api.management.rest.resource.v4.endpoint;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
-import static org.junit.Assert.assertEquals;
 
 import io.gravitee.common.http.HttpStatusCode;
 import io.gravitee.definition.model.v4.ApiType;
