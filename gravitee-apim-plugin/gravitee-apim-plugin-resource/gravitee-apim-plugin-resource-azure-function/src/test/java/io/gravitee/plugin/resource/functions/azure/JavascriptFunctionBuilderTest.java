@@ -32,7 +32,7 @@ class JavascriptFunctionBuilderTest {
         AzureFunctionResourceConfiguration config = new AzureFunctionResourceConfiguration();
         config.setFunctionCode("console.log('hello!')");
         config.setFunctionName("yolo");
-        Path path = new JavascriptFunctionBuilder(config).buildFunction();
+        Path path = new JavascriptFunctionBuilder(config).zipFunction();
         assertThat(path.toString()).startsWith(config.getFunctionName());
         assertThat(path.toString()).endsWith(".zip");
     }
