@@ -56,7 +56,7 @@ public class JavascriptFunctionBuilder extends AbstractFunctionBuilder {
         return LEADING_BLOCK.concat(functionCode).concat(CLOSING_BLOCK);
     }
 
-    public Path buildFunction() throws FunctionBuilderException {
+    public Path zipFunction() throws FunctionBuilderException {
         try (ZipOutputStream zip = new ZipOutputStream(new FileOutputStream(zipFile))) {
             addEntry(zip, functionFile, getCodeAsStream());
             addEntry(zip, bindingsFile, getResourceAsStream(BINDINGS_FILE_NAME));
@@ -65,6 +65,16 @@ public class JavascriptFunctionBuilder extends AbstractFunctionBuilder {
         } catch (IOException e) {
             throw new FunctionBuilderException(e);
         }
+    }
+
+    @Override
+    public void packageFunction() throws FunctionBuilderException {
+        // Do nothing
+    }
+
+    @Override
+    public void deployFunction() throws FunctionBuilderException {
+        // Do nothing
     }
 
     private void addEntry(ZipOutputStream zip, String fileName, InputStream content) throws IOException {

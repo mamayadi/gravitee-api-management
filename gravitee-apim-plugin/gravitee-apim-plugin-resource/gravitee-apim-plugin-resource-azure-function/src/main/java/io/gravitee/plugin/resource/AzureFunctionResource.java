@@ -17,7 +17,10 @@ package io.gravitee.plugin.resource;
 
 import io.gravitee.plugin.resource.helpers.java.JavaFunctionBuilder;
 import io.gravitee.resource.api.AbstractConfigurableResource;
+import java.io.*;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
+import org.apache.maven.shared.invoker.MavenInvocationException;
 
 /**
  * @author Yann TAVERNIER (yann.tavernier at graviteesource.com)
@@ -25,16 +28,20 @@ import java.nio.file.Path;
  */
 public class AzureFunctionResource extends AbstractConfigurableResource<AzureFunctionResourceConfiguration> {
 
+    private JavaFunctionBuilder functionBuilder;
+
     @Override
     protected void doStart() throws Exception {
         super.doStart();
+        functionBuilder = new JavaFunctionBuilder(configuration());
         // Get java code from configuration
         // Use what's in resource folder to generate a zip fpr the function
-        // Then, push the zip to javascript thanks to https://learn.microsoft.com/en-us/azure/azure-functions/deployment-zip-push#rest
+        // Then, push the zip to azure thanks to https://learn.microsoft.com/en-us/azure/azure-functions/deployment-zip-push#rest
 
         // ⚠️ what if we restart the gateway and function has already been deployed ? Maybe add a "force redeploy" configuration to override the deployed one.
 
         // FIXME: pass the configuration code as a parameter to generate the function needed by the user.
-        final Path javaZipPath = new JavaFunctionBuilder(configuration()).buildFunction();
+        functionBuilder.packageFunction();
+        functionBuilder.deployFunction();
     }
 }

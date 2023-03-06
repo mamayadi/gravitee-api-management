@@ -34,5 +34,8 @@ public abstract class AbstractFunctionBuilder {
         this.configuration = configuration;
     }
 
-    public abstract Path buildFunction() throws FunctionBuilderException;
+    public abstract Path zipFunction() throws FunctionBuilderException;
+
+    public abstract void packageFunction() throws FunctionBuilderException;
+    public abstract void deployFunction() throws FunctionBuilderException;
 }

@@ -24,7 +24,7 @@
           "lineNumbers": true,
           "allowDropFileTypes": true,
           "autoCloseTags": true,
-          "mode": "javascript"
+          "mode": "java"
         },
         "hidden": [
           {
