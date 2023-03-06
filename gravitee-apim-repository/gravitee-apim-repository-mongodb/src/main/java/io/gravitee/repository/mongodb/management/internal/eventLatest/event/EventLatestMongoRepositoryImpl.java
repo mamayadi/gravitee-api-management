@@ -13,87 +13,75 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.repository.mongodb.management.internal.event;
+package io.gravitee.repository.mongodb.management.internal.eventLatest.event;
 
-import io.gravitee.common.data.domain.Page;
 import io.gravitee.repository.management.api.search.EventCriteria;
-import io.gravitee.repository.management.api.search.Pageable;
 import io.gravitee.repository.management.model.Event;
-import io.gravitee.repository.mongodb.management.internal.model.EventMongo;
+import io.gravitee.repository.mongodb.management.internal.model.EventLatestMongo;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.aggregation.AggregationOperation;
 import org.springframework.data.mongodb.core.aggregation.AggregationResults;
 import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.mongodb.core.query.Update;
 
 /**
- * @author Titouan COMPIEGNE (titouan.compiegne at graviteesource.com)
- * @author David BRASSELY (david.brassely at graviteesource.com)
+ * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
  * @author GraviteeSource Team
  */
-public class EventMongoRepositoryImpl implements EventMongoRepositoryCustom {
+public class EventLatestMongoRepositoryImpl implements EventLatestMongoRepositoryCustom {
 
     @Autowired
     private MongoTemplate mongoTemplate;
 
-    @Override
-    public Page<EventMongo> search(EventCriteria criteria, Pageable pageable) {
-        Query query = new Query();
-        List<Criteria> criteriaList = buildDBCriteria(criteria);
-        criteriaList.forEach(query::addCriteria);
+    public List<EventLatestMongo> search(EventCriteria criteria, Event.EventProperties group, Long page, Long size) {
+        final String collectionName = mongoTemplate.getCollectionName(EventLatestMongo.class);
 
-        // set sort by updated at
-        query.with(Sort.by(Sort.Direction.DESC, "updatedAt", "_id"));
-
-        long total = mongoTemplate.count(query, EventMongo.class);
-
-        // set pageable
-        if (pageable != null) {
-            query.with(PageRequest.of(pageable.pageNumber(), pageable.pageSize()));
+        Aggregation aggregation;
+        List<AggregationOperation> aggregationOperations = new ArrayList<>();
+        if (group != null) {
+            aggregationOperations.add(Aggregation.match(Criteria.where("properties." + group.getValue()).exists(true)));
+        }
+        if (criteria != null) {
+            List<Criteria> criteriaList = buildDBCriteria(criteria);
+            if (!criteriaList.isEmpty()) {
+                aggregationOperations.add(Aggregation.match(new Criteria().andOperator(criteriaList.toArray(new Criteria[0]))));
+            }
         }
 
-        List<EventMongo> events = mongoTemplate.find(query, EventMongo.class);
+        // Project only useful field to avoid memory consumption during pipeline execution on mongodb side (this excludes the payload from sort and group and avoid 'Command failed with error 292').
+        aggregationOperations.add(Aggregation.project(Aggregation.fields("_id", "updatedAt", "type", "properties")));
 
-        return new Page<>(events, (pageable != null) ? pageable.pageNumber() : 0, events.size(), total);
+        // Sort.
+        aggregationOperations.add(Aggregation.sort(Sort.Direction.DESC, "updatedAt", "_id"));
+
+        // Pagination
+        if (page != null && size != null && size > 0) {
+            aggregationOperations.add(Aggregation.skip(page * size));
+        }
+
+        if (size != null) {
+            aggregationOperations.add(Aggregation.limit(size));
+        }
+
+        // Lookup against events collection again to retrieve full events with payload but limited to the page size to preserve mongodb memory.
+        aggregationOperations.add(Aggregation.lookup(collectionName, "_id", "_id", "lookup_events"));
+        aggregationOperations.add(Aggregation.unwind("lookup_events"));
+        aggregationOperations.add(Aggregation.replaceRoot("lookup_events"));
+
+        aggregation = Aggregation.newAggregation(aggregationOperations);
+
+        final AggregationResults<EventLatestMongo> events = mongoTemplate.aggregate(aggregation, collectionName, EventLatestMongo.class);
+
+        return events.getMappedResults();
     }
 
-    @Override
-    public Event patch(Event event) {
-        Query query = new Query();
-        query.addCriteria(Criteria.where("id").is(event.getId()));
-        Update update = new Update();
-        if (event.getEnvironments() != null) {
-            update.set("environments", event.getEnvironments());
-        }
-        if (event.getType() != null) {
-            update.set("type", event.getType());
-        }
-        if (event.getPayload() != null) {
-            update.set("payload", event.getPayload());
-        }
-        if (event.getParentId() != null) {
-            update.set("parentId", event.getParentId());
-        }
-        if (event.getUpdatedAt() != null) {
-            update.set("updatedAt", event.getUpdatedAt());
-        }
-        if (event.getProperties() != null) {
-            event.getProperties().forEach((property, value) -> update.set("properties." + property, value));
-        }
-        var updateResult = mongoTemplate.updateFirst(query, update, EventMongo.class);
-        return updateResult.getModifiedCount() == 1 ? event : null;
-    }
-
-    private List<Criteria> buildDBCriteria(EventCriteria criteria) {
+    protected List<Criteria> buildDBCriteria(final EventCriteria criteria) {
         List<Criteria> criteriaList = new ArrayList<>();
 
         if (criteria.getTypes() != null && !criteria.getTypes().isEmpty()) {
