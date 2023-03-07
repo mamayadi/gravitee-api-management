@@ -15,9 +15,16 @@
  */
 import { ComponentHarness } from '@angular/cdk/testing';
 import { MatButtonHarness } from '@angular/material/button/testing';
+import { MatTableHarness } from '@angular/material/table/testing';
 
 export class Step4Security1PlansListHarness extends ComponentHarness {
   static hostSelector = 'step-4-security-1-plans-list';
+
+  private readonly table = this.locatorFor(MatTableHarness);
+
+  protected getTable(): Promise<MatTableHarness> {
+    return this.table();
+  }
 
   protected getButtonByText = (text: string) =>
     this.locatorFor(
@@ -25,6 +32,26 @@ export class Step4Security1PlansListHarness extends ComponentHarness {
         text: text,
       }),
     )();
+
+  private async getTextByColumnAndRowIndex(index: number, column: string): Promise<string> {
+    return this.getTable()
+      .then((x) => x.getRows())
+      .then((rows) => rows[index])
+      .then((row) => row.getCellTextByIndex({ columnName: column }))
+      .then((text) => text[0]);
+  }
+
+  async getNameByRowIndex(index: number): Promise<string> {
+    return this.getTextByColumnAndRowIndex(index, 'name');
+  }
+
+  async getSecurityTypeByRowIndex(index: number): Promise<string> {
+    return this.getTextByColumnAndRowIndex(index, 'type');
+  }
+
+  async getStatusByRowIndex(index: number): Promise<string> {
+    return this.getTextByColumnAndRowIndex(index, 'status');
+  }
 
   async clickPrevious() {
     return (await this.getButtonByText('Previous')).click();

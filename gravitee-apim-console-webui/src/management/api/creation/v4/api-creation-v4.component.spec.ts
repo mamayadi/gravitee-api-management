@@ -772,6 +772,32 @@ describe('ApiCreationV4Component', () => {
     });
   });
 
+  describe('step4', () => {
+    beforeEach(async () => {
+      await fillAndValidateStep1ApiDetails();
+      await fillAndValidateStep2Entrypoints0Architecture('async');
+      await fillAndValidateStep2Entrypoints1List();
+      await fillAndValidateStep2Entrypoints2Config();
+      await fillAndValidateStep3Endpoints1List();
+      await fillAndValidateStep3Endpoints2Config();
+      fixture.detectChanges();
+    });
+    describe('step4 - plan list', async () => {
+      it('should show default keyless plan', async () => {
+        const step4Security1PlansListHarness = await harnessLoader.getHarness(Step4Security1PlansListHarness);
+
+        const name = await step4Security1PlansListHarness.getNameByRowIndex(0);
+        expect(name).toEqual('Keyless');
+
+        const securityType = await step4Security1PlansListHarness.getSecurityTypeByRowIndex(0);
+        expect(securityType).toEqual('KEYLESS');
+
+        const status = await step4Security1PlansListHarness.getStatusByRowIndex(0);
+        expect(status).toEqual('CREATED');
+      });
+    });
+  });
+
   describe('step6', () => {
     beforeEach(async () => {
       await fillAndValidateStep1ApiDetails();
@@ -780,7 +806,7 @@ describe('ApiCreationV4Component', () => {
       await fillAndValidateStep2Entrypoints2Config();
       await fillAndValidateStep3Endpoints1List();
       await fillAndValidateStep3Endpoints2Config();
-      await fillAndValidateStep4Security();
+      await fillAndValidateStep4Security1PlansList();
       await fillAndValidateStep5Documentation();
       fixture.detectChanges();
     });
@@ -842,7 +868,7 @@ describe('ApiCreationV4Component', () => {
 
       await fillAndValidateStep3Endpoints1List();
       await fillAndValidateStep3Endpoints2Config();
-      await fillAndValidateStep4Security();
+      await fillAndValidateStep4Security1PlansList();
       await fillAndValidateStep5Documentation();
 
       // Reinitialize step6Harness after last step validation
@@ -873,7 +899,7 @@ describe('ApiCreationV4Component', () => {
 
       await fillAndValidateStep3Endpoints2Config([{ id: 'mock', supportedApiType: 'async', name: 'Mock' }]);
 
-      await fillAndValidateStep4Security();
+      await fillAndValidateStep4Security1PlansList();
       await fillAndValidateStep5Documentation();
 
       // Reinitialize step6Harness after step2 validation
@@ -1018,7 +1044,7 @@ describe('ApiCreationV4Component', () => {
     await step3Endpoints2ConfigHarness.clickValidate();
   }
 
-  async function fillAndValidateStep4Security() {
+  async function fillAndValidateStep4Security1PlansList() {
     const step4 = await harnessLoader.getHarness(Step4Security1PlansListHarness);
     await step4.fillAndValidate();
   }

@@ -27,6 +27,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatRadioModule } from '@angular/material/radio';
+import { MatTableModule } from '@angular/material/table';
 
 import { ApiCreationV4Component } from './api-creation-v4.component';
 import { Step1ApiDetailsComponent } from './steps/step-1-api-details/step-1-api-details.component';
@@ -62,6 +63,7 @@ import { GioConnectorDialogModule } from '../../../../components/gio-connector-d
     MatListModule,
     MatDialogModule,
     MatSnackBarModule,
+    MatTableModule,
     MatTooltipModule,
     MatProgressBarModule,
 

@@ -22,6 +22,12 @@ import { UIRouterState } from '../../../../../../ajs-upgraded-providers';
 import { ApiCreationStepService } from '../../services/api-creation-step.service';
 import { Step5DocumentationComponent } from '../step-5-documentation/step-5-documentation.component';
 
+export interface SecurityPlan {
+  name: string;
+  type: string;
+  status: string;
+}
+
 @Component({
   selector: 'step-4-security-1-plans-list',
   template: require('./step-4-security-1-plans-list.component.html'),
@@ -29,6 +35,14 @@ import { Step5DocumentationComponent } from '../step-5-documentation/step-5-docu
 })
 export class Step4Security1PlansListComponent implements OnInit {
   public form = new FormGroup({});
+  displayedColumns: string[] = ['name', 'type', 'status', 'actions'];
+  dataSource: SecurityPlan[] = [
+    {
+      name: 'Keyless',
+      type: 'KEYLESS',
+      status: 'CREATED',
+    },
+  ];
 
   constructor(@Inject(UIRouterState) readonly ajsState: StateService, private readonly stepService: ApiCreationStepService) {}
 
