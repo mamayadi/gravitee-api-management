@@ -25,7 +25,6 @@ import { Step5DocumentationComponent } from '../step-5-documentation/step-5-docu
 export interface SecurityPlan {
   name: string;
   type: string;
-  status: string;
 }
 
 @Component({
@@ -35,12 +34,11 @@ export interface SecurityPlan {
 })
 export class Step4Security1PlansListComponent implements OnInit {
   public form = new FormGroup({});
-  displayedColumns: string[] = ['name', 'type', 'status', 'actions'];
+  displayedColumns: string[] = ['name', 'type', 'actions'];
   dataSource: SecurityPlan[] = [
     {
       name: 'Keyless',
       type: 'KEYLESS',
-      status: 'CREATED',
     },
   ];
 

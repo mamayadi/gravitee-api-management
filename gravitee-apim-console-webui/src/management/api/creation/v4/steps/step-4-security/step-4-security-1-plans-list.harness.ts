@@ -49,10 +49,6 @@ export class Step4Security1PlansListHarness extends ComponentHarness {
     return this.getTextByColumnAndRowIndex(index, 'type');
   }
 
-  async getStatusByRowIndex(index: number): Promise<string> {
-    return this.getTextByColumnAndRowIndex(index, 'status');
-  }
-
   async clickPrevious() {
     return (await this.getButtonByText('Previous')).click();
   }

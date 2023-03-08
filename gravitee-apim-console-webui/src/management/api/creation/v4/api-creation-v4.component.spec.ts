@@ -782,7 +782,7 @@ describe('ApiCreationV4Component', () => {
       await fillAndValidateStep3Endpoints2Config();
       fixture.detectChanges();
     });
-    describe('step4 - plan list', async () => {
+    describe('step4 - plans list', () => {
       it('should show default keyless plan', async () => {
         const step4Security1PlansListHarness = await harnessLoader.getHarness(Step4Security1PlansListHarness);
 
@@ -791,9 +791,6 @@ describe('ApiCreationV4Component', () => {
 
         const securityType = await step4Security1PlansListHarness.getSecurityTypeByRowIndex(0);
         expect(securityType).toEqual('KEYLESS');
-
-        const status = await step4Security1PlansListHarness.getStatusByRowIndex(0);
-        expect(status).toEqual('CREATED');
       });
     });
   });
