@@ -183,7 +183,7 @@ public class ApiSearchServiceImplTest {
         api.setType(ApiType.MESSAGE);
         api.setDefinition(
             "{\"definitionVersion\" : \"4.0.0\", " +
-            "\"type\": \"async\", " +
+            "\"type\": \"message\", " +
             "\"listeners\" : " +
             "   [{ \"type\" : \"http\", \"paths\" : [{ \"path\": \"/context\"}]" +
             "}] }"
@@ -218,7 +218,7 @@ public class ApiSearchServiceImplTest {
         api.setType(ApiType.MESSAGE);
         api.setDefinition(
             "{\"definitionVersion\" : \"4.0.0\", " +
-            "\"type\": \"async\", " +
+            "\"type\": \"message\", " +
             "\"listeners\" : " +
             "   [{ \"type\" : \"http\", \"paths\" : [{ \"path\": \"/context\"}]" +
             "}] }"

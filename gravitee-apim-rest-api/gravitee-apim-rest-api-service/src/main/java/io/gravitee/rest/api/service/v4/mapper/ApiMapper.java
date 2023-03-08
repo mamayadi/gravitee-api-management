@@ -15,6 +15,9 @@
  */
 package io.gravitee.rest.api.service.v4.mapper;
 
+import static io.gravitee.rest.api.model.WorkflowReferenceType.API;
+import static io.gravitee.rest.api.model.WorkflowType.REVIEW;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.gravitee.common.component.Lifecycle;
@@ -44,10 +47,6 @@ import io.gravitee.rest.api.service.common.UuidString;
 import io.gravitee.rest.api.service.exceptions.TechnicalManagementException;
 import io.gravitee.rest.api.service.v4.FlowService;
 import io.gravitee.rest.api.service.v4.PlanService;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.stereotype.Component;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -55,9 +54,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import static io.gravitee.rest.api.model.WorkflowReferenceType.API;
-import static io.gravitee.rest.api.model.WorkflowType.REVIEW;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Component;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
