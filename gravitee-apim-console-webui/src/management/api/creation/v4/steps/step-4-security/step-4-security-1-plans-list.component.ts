@@ -21,10 +21,18 @@ import { StateService } from '@uirouter/core';
 import { UIRouterState } from '../../../../../../ajs-upgraded-providers';
 import { ApiCreationStepService } from '../../services/api-creation-step.service';
 import { Step5DocumentationComponent } from '../step-5-documentation/step-5-documentation.component';
+import { PlanSecurityType } from '../../../../../../entities/plan-v4';
 
 export interface SecurityPlan {
   name: string;
-  type: string;
+  type: PlanSecurityType;
+}
+
+export enum PlanStatus {
+  STAGING = 'staging',
+  PUBLISHED = 'published',
+  DEPRECATED = 'deprecated',
+  CLOSED = 'closed',
 }
 
 @Component({
@@ -38,7 +46,7 @@ export class Step4Security1PlansListComponent implements OnInit {
   dataSource: SecurityPlan[] = [
     {
       name: 'Keyless',
-      type: 'KEYLESS',
+      type: PlanSecurityType.KEY_LESS,
     },
   ];
 
@@ -51,6 +59,7 @@ export class Step4Security1PlansListComponent implements OnInit {
   save(): void {
     this.stepService.validStep((previousPayload) => ({
       ...previousPayload,
+      plans: [{ name: this.dataSource[0].name, type: this.dataSource[0].type }],
     }));
 
     this.stepService.goToNextStep({ groupNumber: 5, component: Step5DocumentationComponent });

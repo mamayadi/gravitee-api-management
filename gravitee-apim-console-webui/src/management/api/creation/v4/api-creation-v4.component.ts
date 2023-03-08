@@ -15,8 +15,8 @@
  */
 
 import { Component, HostBinding, Inject, Injector, OnDestroy, OnInit } from '@angular/core';
-import { map, switchMap, takeUntil, tap } from 'rxjs/operators';
-import { EMPTY, Observable, Subject } from 'rxjs';
+import { concatMap, map, switchMap, takeUntil, tap } from 'rxjs/operators';
+import { EMPTY, from, Observable, Subject } from 'rxjs';
 import { StateService } from '@uirouter/angular';
 
 import { ApiCreationStep, ApiCreationStepperService } from './services/api-creation-stepper.service';
@@ -27,11 +27,14 @@ import { MenuStepItem } from './components/api-creation-stepper-menu/api-creatio
 import { Step1MenuItemComponent } from './steps/step-1-menu-item/step-1-menu-item.component';
 import { StepEntrypointMenuItemComponent } from './steps/step-connector-menu-item/step-entrypoint-menu-item.component';
 import { StepEndpointMenuItemComponent } from './steps/step-connector-menu-item/step-endpoint-menu-item.component';
+import { PlanStatus } from './steps/step-4-security/step-4-security-1-plans-list.component';
 
 import { ApiV4Service } from '../../../../services-ngx/api-v4.service';
 import { SnackBarService } from '../../../../services-ngx/snack-bar.service';
 import { UIRouterState } from '../../../../ajs-upgraded-providers';
-import { EndpointGroup, Listener } from '../../../../entities/api-v4';
+import { ApiEntity, EndpointGroup, Listener } from '../../../../entities/api-v4';
+import { PlanV4Service } from '../../../../services-ngx/plan-v4.service';
+import { PlanType, PlanValidation } from '../../../../entities/plan-v4';
 
 @Component({
   selector: 'api-creation-v4',
@@ -96,6 +99,7 @@ export class ApiCreationV4Component implements OnInit, OnDestroy {
   constructor(
     private readonly injector: Injector,
     private readonly apiV4Service: ApiV4Service,
+    private readonly planV4Service: PlanV4Service,
     private readonly snackBarService: SnackBarService,
     @Inject(UIRouterState) readonly ajsState: StateService,
   ) {}
@@ -124,7 +128,7 @@ export class ApiCreationV4Component implements OnInit, OnDestroy {
     this.stepper.finished$
       .pipe(
         takeUntil(this.unsubscribe$),
-        switchMap((p) => this.createApi(p)),
+        switchMap(async (p) => this.createApi(p)),
       )
       .subscribe();
   }
@@ -191,7 +195,8 @@ export class ApiCreationV4Component implements OnInit, OnDestroy {
         tap(
           (api) => {
             this.snackBarService.success(`API ${apiCreationPayload.deploy ? 'deployed' : 'created'} successfully!`);
-            this.ajsState.go('management.apis.create-v4-confirmation', { apiId: api.id });
+            this.createPlans(api, apiCreationPayload);
+            return api;
           },
           (err) => {
             this.snackBarService.error(
@@ -200,6 +205,35 @@ export class ApiCreationV4Component implements OnInit, OnDestroy {
             return EMPTY;
           },
         ),
-      );
+      )
+      .subscribe({
+        next: (api) => this.ajsState.go('management.apis.create-v4-confirmation', { apiId: api.id }),
+      });
+  }
+
+  private createPlans(api: ApiEntity, apiCreationPayload: ApiCreationPayload) {
+    if (apiCreationPayload.plans) {
+      from(apiCreationPayload.plans)
+        .pipe(
+          concatMap((plan) =>
+            this.planV4Service.create({
+              apiId: api.id,
+              description: plan.name,
+              flows: [],
+              name: plan.name,
+              security: { configuration: {}, type: plan.type },
+              status: api.lifecycleState === 'PUBLISHED' && api.state === 'STARTED' ? PlanStatus.PUBLISHED : PlanStatus.STAGING,
+              type: PlanType.API,
+              validation: PlanValidation.AUTO,
+            }),
+          ),
+        )
+        .subscribe({
+          error: (error) => {
+            this.snackBarService.error(error.error?.message ?? `An error occurred while creating security plans associated to the API.`);
+            return EMPTY;
+          },
+        });
+    }
   }
 }

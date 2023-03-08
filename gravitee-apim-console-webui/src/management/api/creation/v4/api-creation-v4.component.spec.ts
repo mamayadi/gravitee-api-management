@@ -36,6 +36,7 @@ import { Step3Endpoints2ConfigHarness } from './steps/step-3-endpoints/step-3-en
 import { Step1ApiDetailsComponent } from './steps/step-1-api-details/step-1-api-details.component';
 import { Step2Entrypoints1ListComponent } from './steps/step-2-entrypoints/step-2-entrypoints-1-list.component';
 import { Step2Entrypoints0ArchitectureHarness } from './steps/step-2-entrypoints/step-2-entrypoints-0-architecture.harness';
+import { PlanStatus } from './steps/step-4-security/step-4-security-1-plans-list.component';
 
 import { UIRouterState } from '../../../../ajs-upgraded-providers';
 import { CONSTANTS_TESTING, GioHttpTestingModule } from '../../../../shared/testing';
@@ -46,6 +47,7 @@ import { PortalSettings } from '../../../../entities/portal/portalSettings';
 import { Environment } from '../../../../entities/environment/environment';
 import { fakeEnvironment } from '../../../../entities/environment/environment.fixture';
 import { toQueryParams, ListPluginsExpand } from '../../../../entities/plugin/ListPluginsExpand';
+import { PlanSecurityType } from '../../../../entities/plan-v4';
 
 describe('ApiCreationV4Component', () => {
   const httpProxyEntrypoint: Partial<ConnectorListItem>[] = [{ id: 'http-proxy', supportedApiType: 'sync', name: 'HTTP Proxy' }];
@@ -783,19 +785,29 @@ describe('ApiCreationV4Component', () => {
       fixture.detectChanges();
     });
     describe('step4 - plans list', () => {
-      it('should show default keyless plan', async () => {
+      it('should add default keyless plan to payload', async () => {
         const step4Security1PlansListHarness = await harnessLoader.getHarness(Step4Security1PlansListHarness);
 
         const name = await step4Security1PlansListHarness.getNameByRowIndex(0);
         expect(name).toEqual('Keyless');
 
         const securityType = await step4Security1PlansListHarness.getSecurityTypeByRowIndex(0);
-        expect(securityType).toEqual('KEYLESS');
+        expect(securityType).toEqual('KEY_LESS');
+
+        await step4Security1PlansListHarness.clickValidate();
+        expect(component.currentStep.payload.plans).toEqual([
+          {
+            name: 'Keyless',
+            type: PlanSecurityType.KEY_LESS,
+          },
+        ]);
       });
     });
   });
 
   describe('step6', () => {
+    const API_ID = 'my-api';
+
     beforeEach(async () => {
       await fillAndValidateStep1ApiDetails();
       await fillAndValidateStep2Entrypoints0Architecture('async');
@@ -910,34 +922,18 @@ describe('ApiCreationV4Component', () => {
       const step6Harness = await harnessLoader.getHarness(Step6SummaryHarness);
       await step6Harness.clickCreateMyApiButton();
 
-      const req = httpTestingController.expectOne({ url: `${CONSTANTS_TESTING.env.baseURL}/v4/apis`, method: 'POST' });
+      expectCallsForApiCreation(API_ID);
 
-      // Todo: complete with all the expected fields
-      expect(req.request.body).toEqual(
-        expect.objectContaining({
-          name: 'API name',
-        }),
-      );
-      req.flush(fakeApiEntity({ id: 'api-id' }));
-
-      expect(fakeAjsState.go).toHaveBeenCalledWith('management.apis.create-v4-confirmation', { apiId: 'api-id' });
+      expect(fakeAjsState.go).toHaveBeenCalledWith('management.apis.create-v4-confirmation', { apiId: API_ID });
     });
 
     it('should go to confirmation page after clicking Deploy my API', async () => {
       const step6Harness = await harnessLoader.getHarness(Step6SummaryHarness);
       await step6Harness.clickDeployMyApiButton();
 
-      const req = httpTestingController.expectOne({ url: `${CONSTANTS_TESTING.env.baseURL}/v4/apis`, method: 'POST' });
+      expectCallsForApiCreation(API_ID);
 
-      // Todo: complete with all the expected fields
-      expect(req.request.body).toEqual(
-        expect.objectContaining({
-          name: 'API name',
-        }),
-      );
-      req.flush(fakeApiEntity({ id: 'api-id' }));
-
-      expect(fakeAjsState.go).toHaveBeenCalledWith('management.apis.create-v4-confirmation', { apiId: 'api-id' });
+      expect(fakeAjsState.go).toHaveBeenCalledWith('management.apis.create-v4-confirmation', { apiId: API_ID });
     });
   });
 
@@ -1068,5 +1064,27 @@ describe('ApiCreationV4Component', () => {
   function exceptEnvironmentGetRequest(environment: Environment) {
     httpTestingController.expectOne({ url: `${CONSTANTS_TESTING.env.baseURL}`, method: 'GET' }).flush(environment);
     fixture.detectChanges();
+  }
+
+  function expectCallsForApiCreation(id: string) {
+    const createApiRequest = httpTestingController.expectOne({ url: `${CONSTANTS_TESTING.env.baseURL}/v4/apis`, method: 'POST' });
+
+    // TODO: complete with all the expected fields
+    expect(createApiRequest.request.body).toEqual(
+      expect.objectContaining({
+        name: 'API name',
+      }),
+    );
+    createApiRequest.flush(fakeApiEntity({ id }));
+
+    const createPlansRequest = httpTestingController.expectOne({
+      url: `${CONSTANTS_TESTING.env.baseURL}/v4/apis/${id}/plans`,
+      method: 'POST',
+    });
+    expect(createPlansRequest.request.body).toEqual(
+      expect.objectContaining({
+        status: PlanStatus.STAGING,
+      }),
+    );
   }
 });
