@@ -802,6 +802,24 @@ describe('ApiCreationV4Component', () => {
           },
         ]);
       });
+
+      it('should add no plans to payload after deleting default plan', async () => {
+        const step4Security1PlansListHarness = await harnessLoader.getHarness(Step4Security1PlansListHarness);
+
+        expect(await step4Security1PlansListHarness.countNumberOfRows()).toEqual(1);
+
+        const name = await step4Security1PlansListHarness.getNameByRowIndex(0);
+        expect(name).toEqual('Default Keyless Plan');
+
+        const securityType = await step4Security1PlansListHarness.getSecurityTypeByRowIndex(0);
+        expect(securityType).toEqual('Keyless');
+
+        await step4Security1PlansListHarness.clickRemovePlanButton();
+        expect(await step4Security1PlansListHarness.countNumberOfRows()).toEqual(0);
+
+        await step4Security1PlansListHarness.clickValidate();
+        expect(component.currentStep.payload.plans).toEqual([]);
+      });
     });
   });
 

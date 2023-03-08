@@ -26,6 +26,8 @@ export class Step4Security1PlansListHarness extends ComponentHarness {
     return this.table();
   }
 
+  protected getButtonBySelector = (selector: string) => this.locatorFor(MatButtonHarness.with({ selector }))();
+
   protected getButtonByText = (text: string) =>
     this.locatorFor(
       MatButtonHarness.with({
@@ -47,6 +49,16 @@ export class Step4Security1PlansListHarness extends ComponentHarness {
 
   async getSecurityTypeByRowIndex(index: number): Promise<string> {
     return this.getTextByColumnAndRowIndex(index, 'type');
+  }
+
+  async countNumberOfRows(): Promise<number> {
+    return this.table()
+      .then((table) => table.getRows())
+      .then((rows) => rows.length);
+  }
+
+  async clickRemovePlanButton(): Promise<void> {
+    return this.getButtonBySelector('[aria-label="Remove plan"]').then((btn) => btn.click());
   }
 
   async clickPrevious() {

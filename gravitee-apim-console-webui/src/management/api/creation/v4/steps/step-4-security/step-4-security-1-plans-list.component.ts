@@ -43,23 +43,23 @@ export enum PlanStatus {
 export class Step4Security1PlansListComponent implements OnInit {
   public form = new FormGroup({});
   displayedColumns: string[] = ['name', 'type', 'actions'];
-  dataSource: SecurityPlan[] = [
-    {
-      name: 'Keyless',
-      type: PlanSecurityType.KEY_LESS,
-    },
-  ];
+  plans: SecurityPlan[] = [];
 
   constructor(@Inject(UIRouterState) readonly ajsState: StateService, private readonly stepService: ApiCreationStepService) {}
 
   ngOnInit(): void {
     // const currentStepPayload = this.stepService.payload;
+    this.plans.push({
+      name: 'Default Keyless Plan',
+      type: PlanSecurityType.KEY_LESS,
+    });
   }
 
   save(): void {
+    const plans = this.plans;
     this.stepService.validStep((previousPayload) => ({
       ...previousPayload,
-      plans: [{ name: this.dataSource[0].name, type: this.dataSource[0].type }],
+      plans,
     }));
 
     this.stepService.goToNextStep({ groupNumber: 5, component: Step5DocumentationComponent });
@@ -67,5 +67,9 @@ export class Step4Security1PlansListComponent implements OnInit {
 
   goBack(): void {
     this.stepService.goToPreviousStep();
+  }
+
+  removePlan(plan: SecurityPlan) {
+    this.plans = this.plans.filter((listedPlan) => listedPlan !== plan);
   }
 }
