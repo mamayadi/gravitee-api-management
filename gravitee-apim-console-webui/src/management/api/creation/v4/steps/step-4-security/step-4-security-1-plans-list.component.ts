@@ -26,13 +26,7 @@ import { PlanSecurityType } from '../../../../../../entities/plan-v4';
 export interface SecurityPlan {
   name: string;
   type: PlanSecurityType;
-}
-
-export enum PlanStatus {
-  STAGING = 'staging',
-  PUBLISHED = 'published',
-  DEPRECATED = 'deprecated',
-  CLOSED = 'closed',
+  label: string;
 }
 
 @Component({
@@ -52,7 +46,25 @@ export class Step4Security1PlansListComponent implements OnInit {
     this.plans.push({
       name: 'Default Keyless Plan',
       type: PlanSecurityType.KEY_LESS,
+      label: this.getCleanTypeByPlanSecurityType(PlanSecurityType.KEY_LESS),
     });
+  }
+
+  private getCleanTypeByPlanSecurityType(planSecurityType: PlanSecurityType): string {
+    switch (planSecurityType) {
+      case PlanSecurityType.API_KEY: {
+        return 'API Key';
+      }
+      case PlanSecurityType.JWT: {
+        return 'JWT';
+      }
+      case PlanSecurityType.OAUTH2: {
+        return 'OAuth2';
+      }
+      default: {
+        return 'Keyless';
+      }
+    }
   }
 
   save(): void {

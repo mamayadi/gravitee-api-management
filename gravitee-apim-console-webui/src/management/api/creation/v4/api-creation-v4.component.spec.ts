@@ -36,7 +36,6 @@ import { Step3Endpoints2ConfigHarness } from './steps/step-3-endpoints/step-3-en
 import { Step1ApiDetailsComponent } from './steps/step-1-api-details/step-1-api-details.component';
 import { Step2Entrypoints1ListComponent } from './steps/step-2-entrypoints/step-2-entrypoints-1-list.component';
 import { Step2Entrypoints0ArchitectureHarness } from './steps/step-2-entrypoints/step-2-entrypoints-0-architecture.harness';
-import { PlanStatus } from './steps/step-4-security/step-4-security-1-plans-list.component';
 
 import { UIRouterState } from '../../../../ajs-upgraded-providers';
 import { CONSTANTS_TESTING, GioHttpTestingModule } from '../../../../shared/testing';
@@ -789,16 +788,17 @@ describe('ApiCreationV4Component', () => {
         const step4Security1PlansListHarness = await harnessLoader.getHarness(Step4Security1PlansListHarness);
 
         const name = await step4Security1PlansListHarness.getNameByRowIndex(0);
-        expect(name).toEqual('Keyless');
+        expect(name).toEqual('Default Keyless Plan');
 
         const securityType = await step4Security1PlansListHarness.getSecurityTypeByRowIndex(0);
-        expect(securityType).toEqual('KEY_LESS');
+        expect(securityType).toEqual('Keyless');
 
         await step4Security1PlansListHarness.clickValidate();
         expect(component.currentStep.payload.plans).toEqual([
           {
-            name: 'Keyless',
+            name: 'Default Keyless Plan',
             type: PlanSecurityType.KEY_LESS,
+            label: 'Keyless',
           },
         ]);
       });
@@ -1101,7 +1101,7 @@ describe('ApiCreationV4Component', () => {
     });
     expect(createPlansRequest.request.body).toEqual(
       expect.objectContaining({
-        status: PlanStatus.STAGING,
+        status: 'staging',
       }),
     );
   }

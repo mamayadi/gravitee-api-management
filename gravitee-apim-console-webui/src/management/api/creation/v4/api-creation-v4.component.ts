@@ -27,7 +27,6 @@ import { MenuStepItem } from './components/api-creation-stepper-menu/api-creatio
 import { Step1MenuItemComponent } from './steps/step-1-menu-item/step-1-menu-item.component';
 import { StepEntrypointMenuItemComponent } from './steps/step-connector-menu-item/step-entrypoint-menu-item.component';
 import { StepEndpointMenuItemComponent } from './steps/step-connector-menu-item/step-endpoint-menu-item.component';
-import { PlanStatus } from './steps/step-4-security/step-4-security-1-plans-list.component';
 
 import { ApiV4Service } from '../../../../services-ngx/api-v4.service';
 import { SnackBarService } from '../../../../services-ngx/snack-bar.service';
@@ -222,7 +221,7 @@ export class ApiCreationV4Component implements OnInit, OnDestroy {
               flows: [],
               name: plan.name,
               security: { configuration: {}, type: plan.type },
-              status: api.lifecycleState === 'PUBLISHED' && api.state === 'STARTED' ? PlanStatus.PUBLISHED : PlanStatus.STAGING,
+              status: api.lifecycleState === 'PUBLISHED' && api.state === 'STARTED' ? 'published' : 'staging',
               type: PlanType.API,
               validation: PlanValidation.AUTO,
             }),

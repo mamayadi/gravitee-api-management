@@ -20,7 +20,6 @@ import { PlanV4Service } from './plan-v4.service';
 
 import { CONSTANTS_TESTING, GioHttpTestingModule } from '../shared/testing';
 import { NewPlan, PlanSecurityType, PlanType, PlanValidation } from '../entities/plan-v4';
-import { PlanStatus } from '../management/api/creation/v4/steps/step-4-security/step-4-security-1-plans-list.component';
 
 describe('PlanV4Service', () => {
   let httpTestingController: HttpTestingController;
@@ -47,7 +46,7 @@ describe('PlanV4Service', () => {
         apiId: 'api-1',
         description: '',
         flows: [],
-        status: PlanStatus.PUBLISHED,
+        status: 'published',
         type: PlanType.API,
         validation: PlanValidation.AUTO,
         name: 'free',
