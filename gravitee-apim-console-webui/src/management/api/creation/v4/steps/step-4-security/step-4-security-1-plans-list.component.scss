@@ -10,16 +10,11 @@
   // 🚧
   &__table {
     width: 100%;
+    @include mat.elevation(1);
 
     &__actions {
       display: flex;
       justify-content: center;
     }
   }
-}
-tr.mat-header-row {
-  background: mat.get-color-from-palette(gio.$mat-neutral-palette, 'lighter');
-}
-th.mat-header-cell {
-  color: black;
 }

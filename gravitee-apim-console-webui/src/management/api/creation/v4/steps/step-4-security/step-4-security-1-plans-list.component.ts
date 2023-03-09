@@ -26,7 +26,7 @@ import { PlanSecurityType } from '../../../../../../entities/plan-v4';
 export interface SecurityPlan {
   name: string;
   type: PlanSecurityType;
-  label: string;
+  description: string;
 }
 
 @Component({
@@ -36,7 +36,7 @@ export interface SecurityPlan {
 })
 export class Step4Security1PlansListComponent implements OnInit {
   public form = new FormGroup({});
-  displayedColumns: string[] = ['name', 'type', 'actions'];
+  displayedColumns: string[] = ['name', 'security', 'actions'];
   plans: SecurityPlan[] = [];
 
   constructor(@Inject(UIRouterState) readonly ajsState: StateService, private readonly stepService: ApiCreationStepService) {}
@@ -44,13 +44,13 @@ export class Step4Security1PlansListComponent implements OnInit {
   ngOnInit(): void {
     // const currentStepPayload = this.stepService.payload;
     this.plans.push({
-      name: 'Default Keyless Plan',
+      name: 'Default Keyless (UNSECURED)',
       type: PlanSecurityType.KEY_LESS,
-      label: this.getCleanTypeByPlanSecurityType(PlanSecurityType.KEY_LESS),
+      description: 'Default unsecured plan',
     });
   }
 
-  private getCleanTypeByPlanSecurityType(planSecurityType: PlanSecurityType): string {
+  private getLabelByPlanSecurityType(planSecurityType: PlanSecurityType): string {
     switch (planSecurityType) {
       case PlanSecurityType.API_KEY: {
         return 'API Key';
@@ -61,8 +61,11 @@ export class Step4Security1PlansListComponent implements OnInit {
       case PlanSecurityType.OAUTH2: {
         return 'OAuth2';
       }
-      default: {
+      case PlanSecurityType.KEY_LESS: {
         return 'Keyless';
+      }
+      default: {
+        return 'None';
       }
     }
   }

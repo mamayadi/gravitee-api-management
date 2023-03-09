@@ -788,17 +788,17 @@ describe('ApiCreationV4Component', () => {
         const step4Security1PlansListHarness = await harnessLoader.getHarness(Step4Security1PlansListHarness);
 
         const name = await step4Security1PlansListHarness.getNameByRowIndex(0);
-        expect(name).toEqual('Default Keyless Plan');
+        expect(name).toEqual('Default Keyless (UNSECURED)');
 
         const securityType = await step4Security1PlansListHarness.getSecurityTypeByRowIndex(0);
-        expect(securityType).toEqual('Keyless');
+        expect(securityType).toEqual('KEY_LESS');
 
         await step4Security1PlansListHarness.clickValidate();
         expect(component.currentStep.payload.plans).toEqual([
           {
-            name: 'Default Keyless Plan',
+            name: 'Default Keyless (UNSECURED)',
             type: PlanSecurityType.KEY_LESS,
-            label: 'Keyless',
+            description: 'Default unsecured plan',
           },
         ]);
       });
@@ -809,10 +809,10 @@ describe('ApiCreationV4Component', () => {
         expect(await step4Security1PlansListHarness.countNumberOfRows()).toEqual(1);
 
         const name = await step4Security1PlansListHarness.getNameByRowIndex(0);
-        expect(name).toEqual('Default Keyless Plan');
+        expect(name).toEqual('Default Keyless (UNSECURED)');
 
         const securityType = await step4Security1PlansListHarness.getSecurityTypeByRowIndex(0);
-        expect(securityType).toEqual('Keyless');
+        expect(securityType).toEqual('KEY_LESS');
 
         await step4Security1PlansListHarness.clickRemovePlanButton();
         expect(await step4Security1PlansListHarness.countNumberOfRows()).toEqual(0);

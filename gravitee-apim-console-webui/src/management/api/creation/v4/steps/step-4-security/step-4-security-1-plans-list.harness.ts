@@ -48,7 +48,7 @@ export class Step4Security1PlansListHarness extends ComponentHarness {
   }
 
   async getSecurityTypeByRowIndex(index: number): Promise<string> {
-    return this.getTextByColumnAndRowIndex(index, 'type');
+    return this.getTextByColumnAndRowIndex(index, 'security');
   }
 
   async countNumberOfRows(): Promise<number> {

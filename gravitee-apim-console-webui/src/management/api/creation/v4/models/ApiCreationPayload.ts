@@ -45,6 +45,7 @@ export type ApiCreationPayload = Partial<{
   plans?: {
     name: string;
     type: PlanSecurityType;
+    description: string;
   }[];
 
   // Summary

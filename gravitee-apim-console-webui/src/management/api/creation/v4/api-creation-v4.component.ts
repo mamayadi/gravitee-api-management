@@ -217,7 +217,7 @@ export class ApiCreationV4Component implements OnInit, OnDestroy {
           concatMap((plan) =>
             this.planV4Service.create({
               apiId: api.id,
-              description: plan.name,
+              description: plan.description,
               flows: [],
               name: plan.name,
               security: { configuration: {}, type: plan.type },
