@@ -60,7 +60,7 @@ describe('PlanV4Service', () => {
 
       const planReq = httpTestingController.expectOne({
         method: 'POST',
-        url: `${CONSTANTS_TESTING.env.baseURL}/apis/${plan.apiId}/plans`,
+        url: `${CONSTANTS_TESTING.env.baseURL}/v4/apis/${plan.apiId}/plans`,
       });
       expect(planReq.request.body).toEqual(plan);
       planReq.flush(plan);
